@@ -10,6 +10,9 @@ At the moment the following four modules provide for a Emulab/Deter like experim
 - mysqlMaster
 - expMaster
 
+Note that the mysql database format is exactly same as the original emulab/deter ...
+So to make it a copy of the live deter minibed db was copied ...
+
 Each of them canbe started as a docker container for now, though the intention was to allow any combination of 
 physical, VM and container mixture.
 
