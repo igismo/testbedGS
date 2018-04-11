@@ -1,0 +1,570 @@
+#!/usr/bin/perl -w
+
+use English;
+
+# Returns 0 on success.
+# Returns 1 on non-mapper failure.
+# Returns (1 | mapper's errorcode) on mapper failure.
+# Returns |0x40 if update caused a swapout. Icky.
+# Returns -1 on uncontrolled error (die called).
+
+sub usage()
+{
+    print STDERR
+	"Usage: $0 {in|out|modify [-reboot] [-eventsys_restart]} ".
+	"[-noswapout] pid eid\n";
+    exit(-1);
+}
+
+#
+# Configure variables
+#
+my $TBROOT         = "/usr/testbed";
+my $TBOPS          = "testbed-ops\@minibed.deterlab.net";
+my $TBLOGS         = "testbed-logs\@minibed.deterlab.net";
+my $MAINSITE	   = 0;
+my $ELABINELAB     = 0;
+my $THISHOMEBASE   = "minibed.deterlab.net";
+my $TESTMODE       = 0;
+my $DISABLE_EVENTS = "";
+my $piper          = "$TBROOT/sbin/locpiper";
+my $mapper         = "$TBROOT/bin/mapper";
+# DETER mys
+my $portal_setup   = "$TBROOT/sbin/portal_setup";
+my $cxa_setup   = "$TBROOT/libexec/cxa_setup";
+
+# Untaint the path
+$ENV{'PATH'} = "/usr/bin:$TBROOT/libexec:$TBROOT/libexec/ns2ir" . 
+    ":$TBROOT/sbin:$TBROOT/bin";
+
+# Testbed Support libraries
+use lib "/usr/testbed/lib";
+use libdb;
+use libtestbed;
+use libctlsep;
+use libadminctrl;
+use libadminmfs;
+use libtblog;
+use EmulabFeatures;
+use libArchive;
+use Experiment;
+use User;
+use Lan;
+use Firewall;
+
+sub REAL()    { return 5; }
+sub CLEANUP() { return 4; }
+sub RETRY()   { return 3; }
+sub MODIFY()  { return 2; }
+sub UPDATE()  { return 1; }
+sub MODIFY_RECOVER()  { return 0; }
+
+#
+# Grab global enable of linkdelays.
+#
+my $enablelinkdelays = TBGetSiteVar("general/linux_endnodeshaping");
+
+
+# Turn on and off running the ZFS mount setup script
+my $enable_zfs = TBGetSiteVar("zfs/enable");
+
+#
+# Turn off line buffering on output
+#
+
+$| = 1;
+
+my $updateReboot   = 0;
+my $updateReconfig = 1;
+my $update_Eventsys_restart = 0;
+my $elabinelab     = 0;
+my $plabinelab     = 0;
+my $noswapout      = 0;
+my $errors         = 0;
+my $updatehosed    = 0;
+my $state;
+my $canceled;
+my $os_setup_pid;
+my $nextState;
+
+#
+# First argument is either "in", "out", or "update";
+
+my $swapop = shift;	
+
+#
+# Get other arguments.
+#
+
+while ($#ARGV > 1) {
+    $arg = shift;
+    if ($arg eq "-reboot") {
+	$updateReboot = 1;
+	$updateReconfig = 0;
+    } elsif ($arg eq "-noreconfig") {
+	$updateReboot   = 0;
+	$updateReconfig = 0;
+    } elsif ($arg eq "-eventsys_restart" && $swapop eq "modify") {
+	$update_Eventsys_restart = 1;
+    } elsif ($arg eq "-noswapout") {
+	$noswapout = 1;
+    } else {
+	usage();
+    }
+}
+if ($#ARGV < 1) {
+    usage();
+}
+my ($pid,$eid) = @ARGV;
+
+#
+# Verify user and get his DB uid and other info for later.
+#
+my $this_user = User->ThisUser();
+if (! defined($this_user)) {
+    tbdie("You ($UID) do not exist!");
+}
+my $user_uid   = $this_user->uid();
+my $user_name  = $this_user->name();
+my $user_email = $this_user->email();
+
+# Slowly convert to using Experiment module.
+my $experiment = Experiment->Lookup($pid, $eid);
+if (!defined($experiment)) {
+    tbdie("Could not lookup experiment object!")
+}
+my $group   = $experiment->GetGroup();
+my $special = ($pid eq "testbed" || $pid eq "tbres" || $pid eq "emulab-ops");
+
+
+#
+sub expSwapIn() {
+    my $retries = 2;
+
+    tblog_set_attempt(1);
+    $errors = doSwapin(REAL);
+
+    # Attempt a retry if: 
+    #   a) there were errors, 
+    #   b) doswapin() indicated (via return code 3) a retry is appropriate,
+    while ($errors == 3 && $retries ) {
+	$retries--;
+	tblog_inc_attempt();
+
+	print STDERR "Cleaning up after errors; will try again.\n";
+	doSwapout(RETRY);
+
+	print STDERR "Trying again...\n";
+	$errors = doSwapin(RETRY);
+    }
+    if ($errors || $cancelled) {
+	print STDERR "Cleaning up after " .
+	    ($canceled ? "cancelation" : "errors") . ".\n";
+	doSwapout(CLEANUP);
+    }
+
+    print "Successfully finished swap-$swapop for $pid/$eid. " .TBTimeStamp()."\n";
+    exit(0);
+}
+
+#################################
+# doSwapin - Swaps experiment in.
+#
+#            Returns:
+#              0 - successful swapin
+#              1 - failed swapin; cleanup required.
+#              3 - failed swapin; cleanup required; can retry.
+#              7 - failed swapin; assign failed; no cleanup.
+##############################################################
+
+sub doSwapin($) {
+    my $type = shift; 
+    # Just the physnodes ...
+    my @deleted_pnodes = ();
+
+    #
+    # mapper does all the virtual to physical mapping 
+    # and updating the DB state.
+    #
+    
+    if ($type > MODIFY_RECOVER) {
+	
+	print "Mapping to physical reality ...\n";
+	TBDebugTimeStamp("mapper wrapper started");
+
+	#
+	# Pass the -u (update) switch into mapper, which turns on
+	# update mode. When doing a retry, must also fix the current nodes
+	# to avoid stuff jumping around when simply trying to replace a node
+	# that did not boot.
+	#
+	my $exitcode;
+	my $cmd = "$mapper";
+	$cmd .= " -f"
+	    if ($type == RETRY);
+	
+	if (system("$cmd -u $pid $eid")) {
+	    $exitcode = $? >> 8;
+
+	    tberror "Failed ($exitcode) to map to reality.";
+
+	    # Wrapper sets this bit when recovery is possible.
+	    if ($exitcode & 64) {
+		# We can recover. 
+		tbreport(SEV_SECONDARY, 'mapper_failed', $exitcode);
+		return 7;
+	    }
+	    else {
+		# No recovery, no retry.
+		tbreport(SEV_SECONDARY, 'mapper_failed', $exitcode);
+		return 1;
+	    }
+	}
+	TBDebugTimeStamp("mapper wrapper finished");
+
+	print "Mapped to physical reality!\n";
+    }
+
+    # Check cancel flag before continuing. No retry, 
+    TBGetCancelFlag($pid, $eid, \$canceled);
+    if ($canceled) {
+	tbreport(SEV_IMMEDIATE, 'cancel_flag');
+	return 1
+    }
+
+    # Handle tarballs - we might need to fetch some from URLs if the user
+    # asked for that.
+    #
+    print "Fetching tarballs and RPMs (if any) ...\n";
+    TBDebugTimeStamp("tarfiles_setup started");
+
+    if (system("tarfiles_setup $pid $eid")) {
+	#
+	# No recovery for now - what would we do?
+	#
+	tberror({type => 'secondary', severity => SEV_SECONDARY,
+		 error => ['tarfiles_setup_failed']},
+		"Failed to set up tarballs.");
+	return 1;
+    }
+    TBDebugTimeStamp("tarfiles_setup finished");
+
+    # Check cancel flag before continuing. No retry, 
+    TBGetCancelFlag($pid, $eid, \$canceled);
+    if ($canceled) {
+	tbreport(SEV_IMMEDIATE, 'cancel_flag');
+	return 1
+    }
+
+
+    #
+    # Set up extra nodes: DNS names and controlnet sep.
+    #
+    # Turn the extra_nodes active before mounts so that they are added to
+    # exports.
+    #
+    TBDebugTimeStamp("extra_nodes started");
+    DBQueryFatal(
+        "update extra_nodes set active = 1 where pid = '$pid' and eid = '$eid'"
+    );
+    TBCtlVlanAddExtra($pid, $eid);
+    TBDebugTimeStamp("extra_nodes finished");
+
+    #
+    # These things need to get started before the nodes come up, so we'll
+    # do them before the os_setup. Everything else can done in parallel with
+    # os_setup. (Actually, these probably can too, since they should finish
+    # long before the nodes reboot, but better safe than sorry)
+    #
+    print "Setting up mountpoints.\n";
+    TBDebugTimeStamp("mountpoints started");
+    if (system("exports_setup")) {
+	tberror({type => 'secondary', severity => SEV_SECONDARY,
+		 error => ['mountpoints_setup_failed']},
+		"Failed to setup mountpoints.");
+	return 1;
+    }
+    TBDebugTimeStamp("mountpoints finished");
+
+    # Run the ZFS setup script
+    if ($enable_zfs eq 1) {
+        TBDebugTimeStamp("tbswapin: Setting up ZFS exports");
+        system("zfs_setup");
+        TBDebugTimeStamp("ZFS exports setup complete");
+    }
+
+    # we want to have portal nodes have their extra information
+    # in place before the operating systems come up.
+    TBDebugTimeStamp("portal_setup started");
+    system("$portal_setup $pid $eid");
+    TBDebugTimeStamp("portal_setup finished");
+
+    # This includes extra nodes
+    TBDebugTimeStamp("named started");
+    print "Setting up named maps.\n";
+    if (system("named_setup")) {
+	tbwarn "Failed to add node names to named map.";
+	#
+	# This is a non-fatal error.
+	#
+    }
+    TBDebugTimeStamp("named finished");
+
+    # Check cancel flag before continuing. No retry, 
+    TBGetCancelFlag($pid, $eid, \$canceled);
+    if ($canceled) {
+	tbreport(SEV_IMMEDIATE, 'cancel_flag');
+	return 1
+    }
+
+    # XXX Set up control net VLANs here... [KML]
+
+
+    #
+    # Setup any control-net firewall.
+    # This must be done before reloading and rebooting nodes.
+    #
+    if ($firewalled && ($type == REAL || $type == MODIFY) &&
+	doFWlans($experiment,
+		 (($type == MODIFY) ? FWADDNODES : FWSETUP), undef)) {
+	return 1;
+    }
+    #
+    # If user specified -reboot to update,
+    # and we are successfully performing the update,
+    # then mark all nodes in experiment so os_setup will reboot them.
+    # We must reboot nodes on a RETRY as well, since assign has been rerun
+    # and may have remapped interfaces on the nodes.
+    #
+    if ($type == RETRY ||
+	($type == MODIFY && ($updateReboot || $updateReconfig))) {
+	my $needreboot = ($type == RETRY || $updateReboot) ? 1 : 0;
+
+	print STDERR "Marking nodes for ",
+		     $needreboot ? "reboot" : "reconfig", ".\n";
+	$db_result =
+	    DBQueryFatal("select r.node_id,n.allocstate from reserved as r ".
+			 "left join nodes as n on n.node_id=r.node_id ".
+			 "where r.pid='$pid' and r.eid='$eid'");
+
+	while (my ($node,$allocstate) = $db_result->fetchrow_array) {
+	    #
+	    # If the node is INIT_CLEAN, leave it alone. It will still get
+	    # rebooted, but will not falsely be tagged as dirty. This is
+	    # important for vnodes too, where INIT_CLEAN indicated the vnode
+	    # does not even exist yet (plab nodes).
+	    #
+	    if ($allocstate ne TBDB_ALLOCSTATE_RES_INIT_CLEAN()) {
+		TBSetNodeAllocState($node,
+				    ($needreboot ?
+				     TBDB_ALLOCSTATE_RES_INIT_DIRTY() :
+				     TBDB_ALLOCSTATE_RES_RECONFIG()));
+	    }
+	}
+	# Do this only when nodes are to be rebooted.
+	$experiment->ClearPortRegistration()
+	    if ($type == MODIFY);
+    }
+
+    #
+    # Lets run gentopofile again, so we get ltmap right. This will come out
+    # later, most likely.
+    #
+    TBDebugTimeStamp("gentopofile started");
+    print "Generating ltmap (again) ...\n";
+
+    if (system("gentopofile $pid $eid")) {
+        tberror("gentopofile failed!");
+	return 1;
+    }
+    TBDebugTimeStamp("gentopofile finished");
+
+    # XXX fer now hack
+    if (0 && !$firewalled && !$elabinelab && !$plabinelab &&
+	($pid eq "testbed" || $pid eq "tbres")) {
+	DBQueryWarn("update experiments set ".
+		    "    savedisk=1 where pid='$pid' and eid='$eid'");
+    }
+
+    #######################################################################
+    # Since it'll take a while for the nodes to reboot, we'll start now, and
+    # wait for the os_setup to finish, down below
+    ##################################################################
+    print "Resetting OS and rebooting.\n";
+    TBDebugTimeStamp("launching os_setup");
+    if (!($os_setup_pid = fork())) { 
+	exec("os_setup $pid $eid") or return 1;
+    } elsif ($os_setup_pid == -1) {
+	tberror "Fork failed.";
+	return 1;
+    }
+
+    #
+    # XXX
+    # Don't add any steps between here and the waitpid() call below
+    # without verifying that 1) It's OK for nodes to come up before
+    # the step has completed and 2) It's OK for the command to run in
+    # parallel with os_setup (no DB dependencies, etc.)
+    #
+    if ($type != MODIFY || ($ELABINELAB || !$MAINSITE || !$special)) {
+	print "Setting up VLANs.\n";
+	TBDebugTimeStamp("snmpit started");
+	if (system("snmpit -t $pid $eid")) {
+	    tberror({type => 'summary', severity => SEV_SECONDARY,
+		     error => ['vlan_setup_failed']},
+		    "Failed to set up VLANs.");
+	    return 1;
+	}
+	TBDebugTimeStamp("snmpit finished");
+    }
+
+    # No need to do this except during a real swapin.
+    if ($type == REAL) {
+	print "Setting up email lists.\n";
+	TBDebugTimeStamp("genelists started");
+	if (system("genelists -t")) {
+	    tbwarn "Failed to update email lists.";
+	    #
+	    # This is a non-fatal error.
+	    # 
+	}
+	TBDebugTimeStamp("genelists finished");
+    }
+
+    #
+    # DETER: Clear port counters any time we change the experiment.
+    #
+
+    print "Clearing port counters.\n";
+    TBDebugTimeStamp("tbswapin: portstats started");
+    if (system("portstats -z -a -q $pid $eid")) {
+        tbwarn "Failed to clear port counters.";
+        #
+        # This is a non-fatal error.
+        # 
+    }
+    TBDebugTimeStamp("portstats finished");
+
+    #
+    # OK, let's see how that os_setup did
+    #
+    $kid = waitpid($os_setup_pid,0);
+    if ($kid == $os_setup_pid) {
+	undef $os_setup_pid; # Make sure doswapout() doesn't wait for it.
+	if ($CHILD_ERROR) {
+	    tberror "Failed to reset OS and reboot nodes.";
+	    # Use returncode from os_setup process to
+	    # set global $retry flag, indicating to caller
+	    # that it may be beneficial to attempt
+	    # a doSwapin() again.
+	    #
+            if (($CHILD_ERROR >> 8) == 1) {
+		tbreport(SEV_SECONDARY, 'os_node_reset_failed', 'retry');
+		return 3;
+	    } else {
+		tbreport(SEV_SECONDARY, 'os_node_reset_failed', 'error');
+		print STDERR "Not retrying due to error type.\n";
+		return 1;
+	    }
+	}
+    } else {
+	undef $os_setup_pid;
+	tberror "Error waiting for os_setup to finish.";
+	return 1;
+    }
+
+    #
+    # Okay, start the event system now that we know all the nodes have
+    # rebooted (os_setup is done). This only takes a moment (puts itself
+    # in the background), so its not enough of a delay to worry about.
+    # Don't do this during an update, since we didn't kill the 
+    # event system previously, so starting it again will fail!
+    # 
+    if (! ($DISABLE_EVENTS || $elabinelab)) {
+	#
+	# For the robot testbed, start the location piper *before* the event
+	# system.
+	#
+	if (-x $piper && ($type != MODIFY && $type != MODIFY_RECOVER)) {
+	    print "Starting the location piper.\n";
+	    if (system("$piper $pid $eid")) {
+		tberror "Failed to start the location piper.";
+		return 1;
+	    }
+	}
+	
+	if (($update_Eventsys_restart || 
+	    ($type != MODIFY && $type != MODIFY_RECOVER))) {
+	    print "Starting the event system.\n";
+	    TBDebugTimeStamp("eventsys_control started");
+	    if (system("eventsys_control start $pid,$eid")) {
+		tberror({type => 'secondary', severity => SEV_SECONDARY,
+			 error => ['eventsys_start_failed']},
+			"Failed to start the event system.");
+		return 1;
+	    }
+	    TBDebugTimeStamp("eventsys_control finished");
+	}
+    }
+
+    #
+    # Do linktest if user requested it at swapin.
+    #
+    my $query_result =
+	DBQueryFatal("select linktest_level,linktest_pid from experiments ".
+		     "where pid='$pid' and eid='$eid'");
+    my ($linktest_level,$linktest_pid) = $query_result->fetchrow_array();
+
+    if ($linktest_level && ($type == REAL || $type == MODIFY)) {
+	if ($linktest_pid) {
+	    tbwarn "Linktest is already running! $linktest_pid";
+	}
+	else {
+	    #
+	    # Run it. No worries about failures.
+	    #
+	    my $optarg = "-l $linktest_level -t 600 -m";
+    
+	    print "Starting linktest ... this could take a while!'\n";
+	    if (system("linktest_control $optarg $pid $eid") != 0) {
+		tbwarn "Linktest run returned non-zero status!";
+	    }
+	}
+    }
+ 
+
+    # If we are using share external connectivity, grant it
+    #
+    $qr = DBQueryWarn("select eid from risky_experiments ".
+			"where eid='$eid' and pid='$pid' and cxa=1");
+    if ($qr && $qr->numrows) {
+	TBDebugTimeStamp("cxa_setup (setup) started");
+	system("$cxa_setup db2gw $pid $eid");
+	TBDebugTimeStamp("cxa_setup (setup) finished");
+    }
+
+
+    #
+    # Tell the event scheduler to START.
+    # 
+    if (! ($DISABLE_EVENTS || $elabinelab)) {
+	if ( $update_Eventsys_restart || 
+	    ($type != MODIFY && $type != MODIFY_RECOVER) ) {
+	    TBDebugTimeStamp("Starting event time");
+	    my $gid = $group->gid();
+	    my $tevcstart = "tevc";
+	    $tevcstart .= " -k /groups/$pid/$gid/exp/$eid/tbdata/eventkey"
+		if ($pid ne $gid);
+	    $tevcstart .= " -e $pid/$eid now __ns_sequence start";
+	    if (system($tevcstart)) {
+		tberror({type => 'secondary', severity => SEV_SECONDARY,
+			 error => ['event_time_start_failed']},
+			"Failed to start event time.");
+		return 1;
+	    }
+	}
+    }
+
+    return 0;
+}
+

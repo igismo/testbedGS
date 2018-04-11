@@ -1,0 +1,324 @@
+#!/usr/bin/perl -wT
+
+#
+# EMULAB-COPYRIGHT
+# Copyright (c) 2000-2009 University of Utah and the Flux Group.
+# All rights reserved.
+#
+
+use English;
+use Getopt::Std;
+use POSIX qw(isatty setsid);
+use RPC::XML;
+
+#
+# This gets invoked from the Web interface.
+# Swap an experiment in
+sub usage()
+{
+    print(STDERR
+      "Usage: swapexp [-q] [-b | -w] [-i | -a | -f] [-r] [-e] [-N]\n".
+      "               <-s in | out | restart | modify | pause>\n".
+      "               <pid> <eid> [<nsfile>]\n".
+      "switches and arguments:\n".
+      "-w       - wait for experiment swap/modify\n".
+      "-q       - be less chatty\n".
+      "-r       - reboot nodes when doing a modify experiment\n".
+      "-e       - restart event scheduler when doing a modify experiment\n".
+      "-s <op>  - Operation to perform; one of those listed above\n".
+      "-N       - Suppress most email to the user and testbed-ops\n".
+      "<pid>    - The project the experiment belongs to\n".
+      "<eid>    - The experiment name (id)\n".
+      "<nsfile> - Optional NS file to parse for experiment modify\n");
+    exit(-1);
+}
+my  $optlist = "biafres:wqxgNXn";
+
+#
+# Configure variables
+#
+my $TB     = "/usr/testbed";
+my $TBOPS  = "testbed-ops\@minibed.deterlab.net";
+my $TBLOGS = "testbed-logs\@minibed.deterlab.net";
+my $TBINFO = "$TB/expinfo";
+my $TBDOCBASE = "http://www.minibed.deterlab.net";
+my $TBBASE = "https://www.minibed.deterlab.net";
+my $CONTROL  = "users.minibed.deterlab.net";
+
+#
+# Testbed Support libraries
+#
+use lib "/usr/testbed/lib";
+use libdb;
+use libtestbed;
+use libtblog;
+use libArchive;
+use Template;
+use Experiment;
+use User;
+
+# Be careful not to exit on transient error; 0 means infinite retry.
+$libdb::DBQUERY_MAXTRIES = 0;
+
+# For the END block below.
+my $cleaning = 0;
+my $signaled = 0;
+
+my $tbdir    = "$TB/bin";
+my $tbdata   = "tbdata";
+my $checkquota = "$TB/sbin/checkquota";
+my $vtopgen  = "$TB/bin/vtopgen";
+my $idleswap = 0;
+my $autoswap = 0;
+my $force    = 0;
+my $reboot   = 0;
+my $waitmode = 0;
+my $quiet    = 0;
+my $noswapout= 0;
+my $noreconfig=0;
+my $eventsys_restart   = 0;
+my $errorstat= -1;
+my $modifyHosed   = 0;
+my $modifySwapped = 0;
+my $robotexp = 0;
+my $noemail      = 0;
+my $xmlout       = 0;
+
+my $inout;
+my $logfile;
+my $logname;
+my @allnodes;
+my @row;
+my $action;
+my $tag;
+my $nextswapstate;
+my $termswapstate;
+
+my $modifyError; # needed when emailing error
+
+# Protos
+sub fatal($;$);
+sub CheckFWinfo($);
+sub GatherFWinfo();
+        
+# Parse command arguments. Once we return from getopts, all that should
+# left are the required arguments.
+#
+%options = ();
+if (! getopts($optlist, \%options)) {
+    usage();
+}
+if (defined($options{"i"})) {
+    $idleswap = 1;
+}
+if (defined($options{"w"})) {
+    $waitmode = 1;
+}
+if (defined($options{"a"})) {
+    $autoswap = 1;
+}
+if (defined($options{"f"})) {
+    $force = 1;
+}
+if (defined($options{"n"})) {
+    $noswapout  = 1;
+    $noreconfig = 1;
+}
+if (defined($options{"r"})) {
+    $reboot = 1;
+}
+if (defined($options{"e"})) {
+    $eventsys_restart = 1;
+}
+if (defined($options{"q"})) {
+    $quiet = 1;
+}
+if (defined($options{"N"})) {
+    $noemail = 1;
+}
+if (defined($options{"X"})) {
+    $quiet = 1;
+    $xmlout = 1;
+}
+if (defined($options{"s"})) {
+    $inout = $options{"s"};
+}
+
+usage()
+    if (($inout ne "modify" && @ARGV != 2) ||
+    (($waitmode) && ($idleswap || $autoswap || $force)));
+
+my $pid   = $ARGV[0];
+my $eid   = $ARGV[1];
+
+my $repfile = "tbreport.log";
+my $tempnsfile;
+my $modnsfile;
+my $nsfile;
+
+my $experiment = Experiment->Lookup($pid, $eid);
+if (! $experiment) {
+    die("*** $0:\n".
+    "    No such experiment $pid/$eid in the Emulab Database.\n");
+}
+
+my $workdir = $experiment->WorkDir();
+my $userdir = $experiment->UserDir();
+my $unix_gid = $experiment->unix_gid();
+
+#
+# Verify user and get his DB uid and other info for later.
+#
+my $this_user = User->ThisUser();
+if (! defined($this_user)) {
+    tbdie("You ($UID) do not exist!");
+}
+my $user_dbid  = $this_user->dbid();
+my $user_uid   = $this_user->uid();
+my $user_name  = $this_user->name();
+my $user_email = $this_user->email();
+
+#
+# Get email address of the swapper/creator, which may be different than
+# the person who is actually terminating the experiment, since its polite
+# to let the original creator know whats going on. 
+#
+my $swapper = $experiment->GetSwapper();
+$swapper = $experiment->GetCreator()
+    if (!defined($swapper));
+my $expt_head_name  = $swapper->name();
+my $expt_head_email = $swapper->email();
+
+#
+# Set error reporting info
+#
+tblog_set_info($pid,$eid,$UID);
+
+# Must do this before lock tables!
+# idleswap is in minutes, threshold is in hours
+$idleswap_time = 60 * TBGetSiteVar("idle/threshold");
+
+#
+# Temp fix; Disallow swapmod to firewalled experiments. This will come
+# out later.
+#
+my $firewalled = $experiment->IsFirewalled();
+
+#
+# see if we've got a robot exp (this isn't the only check; if this is a
+# swapmod, we've got to check tbprerun as well...
+#
+$robotexp = 
+    TBExptContainsNodeCT($pid,$eid,'robot') || 
+    TBExptContainsNodeCT($pid,$eid,'mote') || 
+    TBExptContainsNodeCT($pid,$eid,'motehost') || 
+    TBExptContainsNodeCT($pid,$eid,'powermon');
+
+#
+# We have to protect against trying to end an experiment that is currently
+# in the process of being terminated. We use a "wrapper" state (actually
+# a timestamp so we can say when termination was requested) since
+# terminating consists of a couple of different experiment states down inside
+# the tb scripts.
+#
+$experiment->LockTables() == 0
+    or die("*** $0:\n".
+       "    Could not lock experiment tables for $pid/$eid!\n");
+
+my $estate          = $experiment->state();
+my $expt_path       = $experiment->path();
+my $canceled        = $experiment->canceled();
+my $expt_locked     = $experiment->locked();
+my $elabinelab      = $experiment->elabinelab();
+my $lockdown        = $experiment->lockdown();
+my $swappablebit    = $experiment->swappable();
+my $idleswapbit     = $experiment->idleswap();
+my $autoswapbit     = $experiment->autoswap();
+my $swappablestr    = ( $swappablebit ? "Yes" : "No" );
+my $idleswapstr     = ( $idleswapbit ? "Yes" : "No" );
+my $autoswapstr     = ( $autoswapbit ? "Yes" : "No" );
+my $noswap          = $experiment->noswap_reason();
+my $noidleswap      = $experiment->noidleswap_reason();
+my $idleswaptime    = $experiment->idleswap_timeout() / 60.0;
+my $autoswaptime    = $experiment->autoswap_timeout() / 60.0;
+
+    # I'm going to update this below, so fix the value before I use it.
+    $idleswap_time = min($idleswaptime * 60, $idleswap_time);
+    $idleswaptime = $idleswap_time / 60.0;
+
+my $swapsettings = 
+  "Idle-Swap:   $idleswapstr".
+  ($idleswapbit ? ", at $idleswaptime hours\n" : " (Reason: $noidleswap)\n").
+  "Auto-Swap:   $autoswapstr".
+  ($autoswapbit ? ", at $autoswaptime hours\n" : "\n");
+
+chdir($workdir)
+
+$nextswapstate = EXPTSTATE_ACTIVATING();
+
+# Update idleswap_timeout to whatever the current value is.
+$experiment->UpdateIdleSwapTime($idleswap_time) == 0
+
+#
+# On a failure, we go back to this swapstate. Might be modified below.
+$termswapstate = $estate;
+$action = "swapped in";
+$tag    = "swapin";
+$experiment->CleanLogFiles() == 0
+$logfile = $experiment->CreateLogFile("swapexp");
+$logname = $logfile->filename();
+$experiment->SetLogFile($logfile);
+$logfile->Open();
+###########################
+TBdbfork();
+##########################
+$experiment->PreSwap($this_user, TBDB_STATS_SWAPIN, $estate);
+#########################
+# Set the swapper now so that nodes use the proper uid. If the swapin
+# fails, we leave the swapper as is, since its harmless and informative.
+$experiment->SetSwapper($this_user);
+
+### THIS WILL RUN: mysystem("$TBSWAP $op $options $pid $eid");
+$experiment->Swap($Experiment::EXPT_SWAPIN);
+#################################################
+
+$experiment->SetState(EXPTSTATE_ACTIVE)
+$experiment->Report($repfile, "-b");
+$experiment->SaveLogFiles();
+
+#
+# Make a copy of the work dir in the user visible space so the user
+# can see the log files. This overwrites existing files of course,
+# but thats okay.
+#
+$experiment->CopyLogFiles();
+
+# And tell the archive library to add the experiment directory.
+libArchive::TBExperimentArchiveAddUserFiles($pid, $eid);
+
+# Do a SavePoint on the experiment files. For both of these archive
+print "Doing a savepoint on the experiment archive ...\n";
+libArchive::TBExperimentArchiveSavePoint($pid, $eid, $tag);
+
+# Gather stats. 
+# Accounting info. For swapout, must be after its done with.
+$experiment->SetSwapInfo($this_user);
+
+$experiment->CloseLogFile()
+
+my $extraMessage = "";
+print "Swap Success!    $extraMessage\n";
+
+#
+# Send email notification to user.
+#
+my $message =
+    "Experiment $eid in project $pid has been ";
+
+$message .= "$action.\n";
+
+# Add the swap settings...
+$message .="\nCurrent swap settings:\n$swapsettings";
+
+exit(0);
+
