@@ -1,0 +1,97 @@
+#!/usr/bin/env python2
+
+from sys import argv
+
+from xmlrpclib import ServerProxy, dumps, loads, Fault, Error, Binary
+from M2Crypto.m2xmlrpclib import Server, SSL_Transport
+from M2Crypto import SSL
+
+import os
+import sys
+
+HOST = 'boss.minibed.deterlab.net'
+PORT = 3069
+PATH = '/usr/testbed'
+CERT = '%s/.ssl/emulab.pem' % os.environ['HOME']
+
+VERSION = 0.1
+
+# set up the XMLRPC server proxy
+uri = 'https://%s:%d%s' % (HOST, PORT, PATH)
+
+ctx = SSL.Context('sslv3')
+ctx.load_cert(CERT, CERT)
+ctx.set_verify(SSL.verify_none, 16)
+ctx.set_allow_unknown_ca(0)
+
+proxy = ServerProxy(uri, SSL_Transport(ctx))
+
+# make an emulab call
+def emulab_call(method, params):
+    remote_method = getattr(proxy, method, None)
+    resp = remote_method(VERSION, params)
+
+    return resp
+
+def usage():
+    print 'Usage: %s [-e] [--extra]' % argv[0]
+    print 'display nodes allocated to experiments'
+    print ''
+    print '  -e, --extra      show extra nodes'
+    exit(0)
+
+#
+# main code starts here
+#
+
+# whether to show extra nodes
+extra = False
+
+if len(argv) > 1:
+    arg = argv[1]
+
+    if arg == '-e' or arg == '--extra':
+        extra = True
+    else:
+        usage()
+
+all_experiments = []
+
+ret = emulab_call('experiment.getlist', {'format': 'full'})
+exp_by_pid = ret['value']
+
+# get the list of active experiments
+for pid, expt_dict in exp_by_pid.items():
+    for gid, experiments in expt_dict.items():
+        for experiment in experiments:
+            eid = experiment['name']
+            if experiment['state'] == 'active':
+                all_experiments.append((pid, eid))
+
+# get the node list
+for pid, eid in all_experiments:
+    ret = emulab_call(
+        'experiment.info',
+        {'proj': pid, 'exp': eid, 'aspect': 'mapping'}
+    )
+    val = ret['value']
+
+    if val:
+        print '%s/%s' % (pid, eid)
+        for node, info in val.items():
+            if info['erole'] == 'node':
+                fullname = '%s.%s.%s' % (node, eid, pid)
+                physname = info['node']
+                print '    %s / %s' % (fullname, physname)
+
+    if extra:
+        ret = emulab_call(
+            'experiment.extra_nodes',
+            {'proj': pid, 'exp': eid}
+        )
+        nodes = ret['value']
+
+        if nodes:
+            print '  extra nodes:'
+            for node in nodes:
+                print '    %s.%s.%s' % (node, eid, pid)
