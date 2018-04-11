@@ -1,0 +1,27 @@
+Experiment: DeterTest/t3zcxc
+State: swapped
+
+Virtual Node Info:
+ID              Type         OS              Qualified Name
+--------------- ------------ --------------- --------------------
+nodeA           pc           Win7PRO-amd64-DL160 nodeA.t3zcxc.DeterTest.minibed.deterlab.net
+nodeB           pc           Win7PRO-amd64-DL160 nodeB.t3zcxc.DeterTest.minibed.deterlab.net
+nodeC           pc           Ubuntu1404-64-STD nodeC.t3zcxc.DeterTest.minibed.deterlab.net
+
+Virtual Lan/Link Info:
+ID              Member/Proto    IP/Mask         Delay     BW (Kbs)  Loss Rate
+--------------- --------------- --------------- --------- --------- ---------
+lan0            nodeA:0         10.1.1.2        0         1000000   0        
+                ethernet        255.255.255.0   0         1000000   0        
+lan0            nodeB:0         10.1.1.3        0         1000000   0        
+                ethernet        255.255.255.0   0         1000000   0        
+lan0            nodeC:0         10.1.1.4        0         1000000   0        
+                ethernet        255.255.255.0   0         1000000   0        
+
+Virtual Queue Info:
+ID              Member          Q Limit    Type    weight/min_th/max_th/linterm
+--------------- --------------- ---------- ------- ----------------------------
+lan0            nodeA:0         100 slots  Tail    0/0/0/0
+lan0            nodeB:0         100 slots  Tail    0/0/0/0
+lan0            nodeC:0         100 slots  Tail    0/0/0/0
+

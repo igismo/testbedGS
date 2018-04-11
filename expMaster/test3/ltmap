@@ -1,0 +1,11 @@
+h nodeA
+h nodeB
+h nodeC
+l nodeA nodeB 1000000000 0.0000 0.000000 lan0 droptail
+l nodeA nodeC 1000000000 0.0000 0.000000 lan0 droptail
+l nodeB nodeA 1000000000 0.0000 0.000000 lan0 droptail
+l nodeB nodeC 1000000000 0.0000 0.000000 lan0 droptail
+l nodeC nodeA 1000000000 0.0000 0.000000 lan0 droptail
+l nodeC nodeB 1000000000 0.0000 0.000000 lan0 droptail
+r static
+s ns
