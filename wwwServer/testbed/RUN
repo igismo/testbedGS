@@ -1,0 +1,73 @@
+#/********************************************************************************
+#
+#    <"testbedGS" - Runtime structures and modular distributed component
+#      architecture providing infrastructure and platform to build testbeds>
+#
+#    Copyright (C) <2018>  <Goran Scuric, goran@usa.net, igismo.com>
+#
+#    GNU GENERAL PUBLIC LICENSE ... Version 3, 29 June 2007
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#*********************************************************************************/
+#// NAME              REV  DATE       REMARKS			@
+#// Goran Scuric      1.0  01012018  Initial design     goran@usa.net
+#//================================================================================
+## create the user network - what if already created ??
+docker network create TB-NETWORK
+## remove container name from the embedded DNS server
+docker rm TB-WWWMASTER
+docker run -v /Users/scuric/go/testbed/log:/log  \
+           -v /Users/scuric/go/src/testbedGS/wwwServer/testbed/www:/var/www \
+           -v /Users/scuric/go/testbed:/testbed \
+           -p 80:80 \
+           -p 443:443 \
+           --cap-add ALL \
+           --privileged=true \
+           --network TB-NETWORK --name TB-WWWMASTER -it wwwserver:latest
+
+#           -v /Users/scuric/go/testbed/proj:/proj \
+#docker-compose up
+# --mount 'type=volume,volume-driver=local,dst=/proj,volume-opt=type=nfs,volume-opt=device=:/proj,"volume-opt=o=addr=172.18.0.4,vers=4,hard"' \
+##-=-=-=-=-=-=-==-=-=-=
+#           --mount 'type=volume,volume-driver=local,dst=/proj,volume-opt=type=nfs,volume-opt=device=:/proj,
+#  "volume-opt=o=addr=172.18.0.4,vers=4,hard, timeo=600,rsize=1048576,wsize=1048576,retrans=2"' \
+
+
+#docker run --mount 'type=volume,src=src_name,volume-driver=local,dst=/mnt,volume-opt=type=nfs,
+#        volume-opt=device=:/nfs-share,"volume-opt=o=nfs-server,vers=4,hard,
+#        timeo=600,rsize=1048576,wsize=1048576,retrans=2"' -d -it --name mycontainer ubuntu
+
+#docker run --mount 'type=volume,src=VOL_NAME,volume-driver=local,dst=/LOCAL-MNT,
+#volume-opt=type=nfs,
+# volume-opt=device=:/NFS-SHARE,
+# "volume-opt=o=addr=NFS-SERVER,
+#vers=4,hard,timeo=600,rsize=1048576,wsize=1048576,retrans=2"' -d -it --name mycontainer ubuntu
+
+#docker service create --mount type=volume,
+# volume-opt=o=addr=192.168.0.1,
+# volume-opt=device=:/share/mynfs/mysql,
+# volume-opt=type=nfs,
+# volume-opt=rsize=1024,volume-opt=wsize=1024,source=mydatabase,
+#target=/var/lib/mysql mysql:5.5
+
+
+#mount -t nfs appsrv143:/ecStorage/nfs /mnt -o addr=192.168.52.121 -o vers=4 -o soft -o timeo=180 -o bg -o tcp -o rw
+
+
+
+#--mount 'type=volume,src=src_name,volume-driver=local,dst=/mnt,
+#volume-opt=type=nfs,
+#volume-opt=device=appsrv143:/ecStorage/nfs,
+#"volume-opt=o=addr=192.168.52.121,
+#vers=4,soft,timeo=180,bg,tcp,rw"'
