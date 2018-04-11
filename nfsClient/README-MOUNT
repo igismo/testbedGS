@@ -1,0 +1,183 @@
+https://github.com/moby/moby/issues/8152
+https://github.com/moby/moby/issues/4213
+https://blog.hashbangbash.com/2014/11/docker-devicemapper-fix-for-device-or-resource-busy-ebusy/
+https://github.com/flaccid/docker-nfs-client
+
+I think this issue should not be closed. There is a need to be able to mount additional volumes at runtime and IMHO
+there should be a way to fulfill this need. See e.g.
+https://www.bountysource.com/issues/33154966-mount-cifs-within-a-container and
+https://stackoverflow.com/questions/27989751/mount-smb-cifs-share-within-a-docker-container and #22197
+
+nfs-client:
+  image: outstand/nfs-client
+  restart: always
+  labels:
+    - io.rancher.os.reloadconfig=true
+    - io.rancher.os.remove=false
+    - io.rancher.os.after=preload-user-images
+  container_name: nfs-client
+  volumes:
+    - /Users:/mnt/Users:shared
+  privileged: true
+  net: host
+  environment:
+    SERVER: 10.211.55.2
+    SHARE: /Users
+    MOUNTPOINT: /mnt/Users
+    FSTYPE: nfs
+    MOUNT_OPTIONS: nfsvers=3
+
+Hi,
+
+I'm mounting a NFS share inside a docker container, and then using the --volumes-from to allow another container to use the data.
+
+$ docker run -d --name nfs -e NFS_PORT_2049_TCP_ADDR=192.168.180.15 --privileged -v /foo nfs-client /foo:/foo
+
+What's odd is that I can attach to the nfs container and see the data from my NAS in /foo, however I can't see it from the second container.
+
+$ docker run --rm -i -t --volumes-from nfs ubuntu:14.04 ls /foo
+The above command doesn't show any content inside /foo. Why would that be?
+
+Is mounting an NFS share the correct way to link app/database containers to the data? I want to have ephemeral containers that are able to access persistent data volumes from multiple hosts.
+-=-=-=-=-=-=-=-=-=
+Why not just mount the NFS share from the other container too?  NFS can handle it.
+
+What is likely happening is that you are creating a 'networked' connection from a physical host (the NFS Share), to another physical host, and then through a MASQUERADing docker container. So at this point its:
+
+Host(eth0) <-nfs-> Host(eth0) <-bridge/proxy-> Host(docker0) <-docker-magic-> Container(eth0)
+
+Volume mounts from one container to another are likely established through the kernel's accessible /proc & /sys folders, since that is the only shared resource with the host.  However, NFS is also mounted through kernel resources tied with your ethernet card.  So it's likey that:
+
+Host(eth0) <-nfs-> Host(eth0) <-bridge/proxy-> Host(docker0) <-docker-magic->Container(eth0) <-kernel?-> Container(/dev/<device?>)
+
+is not passing the expected parameters/args back in forth.  Likely the --volumes-from is expecting the volume to be either part of the Host's physical disk, or part of the container (which also resides on the same host disk...most of the time)
+
+Your quickest solution would likely be to use NFS separately from both containers.  Also doing so would enable you to utilize the NFS server side file locking, which will ensure data is consistantly written to disk in a sort of First in First out method. Also, there are some NFS options you can utilize to optimize database connections. However, it depends on the size of the information being passed between webserver and db, as well as latency.
+
+http://nfs.sourceforge.net/nfs-howto/ar01s05.html
+
+
+
+
+
+
+
+
+Mounting a NFS Directory into Host Volume that is shared with Docker
+
+Consider the following Docker container:
+
+docker run --rm -it -v /tmp:/mnt/tmp alpine sh
+This mounts the host directory /tmp into /mnt/tmp inside of the alpine container.
+
+Now, on the Host System I mount a NFS volume to the /tmp directory:
+
+mkdir /tmp/nfs
+mount -t nfs4 192.168.1.100:/data /tmp/nfs
+The mount works on the Host System, and I see the following:
+
+# ls /tmp/nfs
+file1 file2 file3
+#
+But on the Docker Container, I see a blank directory:
+
+# ls /mnt/tmp/nfs
+#
+I know that I can get around this by doing the mount directly in the Docker Container.
+But I am really interested to know why the mount works on the host container but not in the docker container?
+
+nfs docker
+shareimprove this question
+asked Jun 30 '16 at 0:37
+
+Caleb
+
+
+
+
+
+
+
+170117
+You may need to describe your OS, docker version, etc etc. I just tried this with Centos 7 and docker 1.10
+from extras and it worked as expected; the contents of the NFS mount appeared inside in a debian/jessie container.
+Also whether you have security controls (eg SELinux) and other flags. – Stephen Harris Jun 30 '16 at 11:03
+I am using Ubuntu 16.04 with Docker version 1.12.0-dev, no extra security controls. The problem only exhibits
+itself when I make the NFS Mount after I have created the Alpine container. If I make the NFS Mount before I
+create the Alpine container, I see it as expected. – Caleb Jun 30 '16 at 20:39
+-=-=--=-=-=-=-=-=-=-=-=-=--=-=-=-=-
+3 Answers
+1. This happens because the volume is using private mount propagation. This means that once the mount happens,
+any changes that happen on the origin side (e.g. the "host" side in the case of Docker) will not be visible
+underneath the mount.
+
+There are a couple of ways to handle this:
+
+Do the NFS mount first, then start the container. The mount will propagate to the container, however as before
+any changes to the mount will not be seen by the container (including unmounts).
+
+Use "slave" propagation. This means that once the mount is created, any changes on the origin side (docker host)
+will be able to be seen in the target (in the container). If you happen to be doing nested mounts, you'll want
+to use rslave (r for recursive).
+
+There is also "shared" propagation. This mode would make changes to the mountpoint from inside the container
+propagate to the host, as well as the other way around. Since your user wouldn't even have privileges to make
+such changes (unless you add CAP_SYS_ADMIN), this is probably not what you want.
+
+You can set the propagation mode when creating the mount like so:
+
+$ docker run -v /foo:/bar:private
+The other alternative would be to use a volume rather than a host mount. You can do this like so:
+
+$ docker volume create \
+    --name mynfs \
+    --opt type=nfs \
+    --opt device=:<nfs export path> \
+    --opt o=addr=<nfs host> \
+    mynfs
+$ docker run -it -v mynfs:/foo alpine sh
+This will make sure to always mount in the container for you, doesn't rely on having the host setup in some
+specific way or dealing with mount propagation.
+note: the : at the front of the device path is required, just something weird about the nfs kernel module.
+note: Docker does not currently resolve <nfs host> from a DNS name (it will in 1.13) so you will need to
+supply the ip address here.
+
+More details on "shared subtree" mounts: https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+
+shareimprove this answer
+edited Nov 8 '16 at 21:05
+
+Caleb
+170117
+answered Nov 3 '16 at 2:44
+
+
+2. Enable shared mount propagation on the volume by adding the :shared flag at the end of the volume argument:
+
+docker run --rm -it -v /tmp:/mnt/tmp:shared alpine sh
+If Docker was installed through a package manager or install script for systemd, you may need to adjust the
+MountFlags daemon argument. To do that, locate the docker.service file:
+
+$ sudo find /etc -name "docker.service"
+In my case on Ubuntu 16.04, it was located at /etc/systemd/system/multi-user.target.wants/docker.service.
+Edit this file with vi or nano, and ensure that the MountFlags option reads:
+
+MountFlags=shared
+Save the file, reload the daemon args, and restart docker:
+
+$ sudo systemctl daemon-reload
+$ sudo systemctl restart docker
+Now you should be able to set the shared mount propagation flag on volumes when using "docker run".
+
+answered Jul 1 '16 at 15:37
+Caleb
+170117
+
+From docker 17.06, you can mount the NFS share directly when creating the container, without the need of extra
+capabilities:
+
+docker run --mount 'type=volume,src=src_name,volume-driver=local,dst=/mnt,volume-opt=type=nfs,
+        volume-opt=device=:/nfs-share,"volume-opt=o=nfs-server,vers=4,hard,
+        timeo=600,rsize=1048576,wsize=1048576,retrans=2"' -d -it --name mycontainer ubuntu
+
+Got the hint from https://github.com/moby/moby/issues/28809
