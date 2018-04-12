@@ -4,6 +4,8 @@ Runtime structures and modular distributed component architecture providing infr
 The "system" consists of many compenents (or modules if you wish). To participate in the game they all need to register 
 with the officeMaster first, and then participate in the keep alive exchange ...
 
+Modules communicate with each other usin asynchronous, unreliable UDP datagrams.
+
 At the moment the following four modules provide for a Emulab/Deter like experiment creation:
 - officeMastert
 - wwwMaster
@@ -11,7 +13,7 @@ At the moment the following four modules provide for a Emulab/Deter like experim
 - expMaster
 
 Note that the mysql database format is exactly same as the original emulab/deter ...
-So to make it a copy of the live deter minibed db was copied ...
+So to make it testable a copy of the live deter minibed data base was copied ...
 
 Each of them canbe started as a docker container for now, though the intention was to allow any combination of 
 physical, VM and container mixture.
