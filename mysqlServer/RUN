@@ -30,10 +30,10 @@ docker network create TB-NETWORK
 docker rm TB-MYSQLMASTER
 
 docker run --rm -it --name=TB-MYSQLMASTER --network TB-NETWORK \
---mount type=bind,src=/Users/scuric/go/testbed/db/my.cnf,dst=/et/my.cnf \
---mount type=bind,src=/Users/scuric/go/testbed/db/data,dst=/var/lib/mysql \
---mount type=bind,src=/Users/scuric/go/testbed/db/scripts/,dst=/docker-entrypoint-initdb.d/ \
---mount type=bind,src=/Users/scuric/go/src/testbedGS/mysqlServer,dst=/mnt \
+--mount type=bind,src=/Users/scuric/go/testbedGS/testbed/db/my.cnf,dst=/et/my.cnf \
+--mount type=bind,src=/Users/scuric/go/testbedGS/testbed/db/data,dst=/var/lib/mysql \
+--mount type=bind,src=/Users/scuric/go/testbedGS/testbed/db/scripts/,dst=/docker-entrypoint-initdb.d/ \
+--mount type=bind,src=/Users/scuric/go/testbedGS/mysqlServer,dst=/mnt \
 --env MYSQL_DATABASE=tbdb \
 --env MYSQL_ROOT_HOST=% \
 --env MYSQL_ALLOW_EMPTY_PASSWORD=true \
@@ -41,9 +41,3 @@ docker run --rm -it --name=TB-MYSQLMASTER --network TB-NETWORK \
 --env MYSQL_PASSWORD="" \
    mysql/mysql-server:latest
 
-
-##-d mysql/mysql-server:latest
-## -d for detach
-#docker run --rm -it -p 8000:8000 flaviocopes/golang-docker-example-findlinks
-#docker exec cp ./mysqlMaster /root/mysqlMaster
-#docker exec -i TB-MYSQLSERVER /bin/bash -c "cat > /root/" < $HOST_PATH

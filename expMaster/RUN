@@ -29,8 +29,8 @@ docker build -t expmaster -f Dockerfile.scratch .
 docker network create TB-NETWORK
 ## remove container name from the embedded DNS server
 docker rm TB-EXPMASTER
-docker run -v /Users/scuric/go/testbed/log:/log  \
-           -v /Users/scuric/go/testbed/proj:/proj \
-           -v /Users/scuric/go/testbed:/testbed \
+docker run -v /Users/scuric/go/testbedGS/testbed/log:/log  \
+           -v /Users/scuric/go/testbedGS/testbed/proj:/proj \
+           -v /Users/scuric/go/testbedGS/testbed:/testbed \
            --network TB-NETWORK --name TB-EXPMASTER -it expmaster:latest
 

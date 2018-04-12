@@ -507,7 +507,7 @@ func myInit() {
 		MsgsSent: 0, LastSentAt: "0", MsgsRcvd:0, LastRcvdAt:"0"}
 	sliceOfMasters = append(sliceOfMasters, myEntry)
 	// Optional: check that the record is there
-	myRecord :=  tbUtils.LocateMaster(sliceOfMasters, myName)
+	myRecord,_ :=  tbUtils.LocateMaster(sliceOfMasters, myName)
 	if myRecord != nil {
 		fmt.Println(myName,": ",myRecord.Name.Name, " ADDRESS:",myRecord.Name.Address,
 			"CREATED:",myRecord.Name.TimeCreated, " MSGS_RCVD:",myRecord.MsgsRcvd)

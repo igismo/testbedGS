@@ -27,9 +27,9 @@
 docker network create TB-NETWORK
 ## remove container name from the embedded DNS server
 docker rm TB-WWWMASTER
-docker run -v /Users/scuric/go/testbed/log:/log  \
-           -v /Users/scuric/go/src/testbedGS/wwwServer/testbed/www:/var/www \
-           -v /Users/scuric/go/testbed:/testbed \
+docker run -v /Users/scuric/go/testbedGS/testbed/log:/log  \
+           -v /Users/scuric/go/testbedGS/wwwServer/testbed/www:/var/www \
+           -v /Users/scuric/go/testbedGS/testbed:/testbed \
            -p 80:80 \
            -p 443:443 \
            --cap-add ALL \

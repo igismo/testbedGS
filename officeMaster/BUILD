@@ -23,9 +23,6 @@
 #// NAME              REV  DATE       REMARKS			@
 #// Goran Scuric      1.0  01012018  Initial design     goran@usa.net
 #//================================================================================
-
-
-##rm udpServer
 GOOS=linux go build -a  -o officeMaster .
 docker build -t officemaster -f Dockerfile.scratch .
 docker network create TB-NETWORK
@@ -34,10 +31,10 @@ docker rm TB-OFFICEMASTER
 ## can examine by: docker run -v TBlog:/log busybox ls /log
 ## the tbConfig was: var TBlogPath = "/log/"
 ##docker run  -v TBlog:/log  --network TB-NETWORK --name TB-OFFICEMGR -it officemgr:latest
-docker run  -v /Users/scuric/go/testbed/log:/log  \
-            -v /Users/scuric/go/testbed/proj:/proj \
-            -v /Users/scuric/go/src/testbedGS/wwwServer/testbed/www:/var/www \
-            -v /Users/scuric/go/testbed:/testbed \
+docker run  -v /Users/scuric/go/testbedGS/testbed/log:/log  \
+            -v /Users/scuric/go/testbedGS/testbed/proj:/proj \
+            -v /Users/scuric/go/testbedGS/wwwServer/testbed/www:/var/www \
+            -v /Users/scuric/go/testbedGS/testbed:/testbed \
             --cap-add ALL \
             --privileged=true \
             --network TB-NETWORK --name TB-OFFICEMASTER -it officemaster:latest
