@@ -23,3 +23,6 @@ It is not important in which order they are started ... eventaully they synchron
 IP addresses of other modules required by each of them to be fully functional ..
 
 More later
+
+NOTE: tomake it work you will need to change some directories in most of the "BUILD" and "RUN" script in each directory.
+Currently it is set to /Users/scuric/go/src/... and /Users/scuric/go/testbed ...
