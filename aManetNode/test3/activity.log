@@ -1,0 +1,81 @@
+Running 'tbprerun  -e 55 t3zcxc.ns'
+Beginning pre run for DeterTest/t3zcxc. 18:42:33:995882
+Running parser ... 18:42:34:612944
+GORAN:NewTableRow Tablenam=virt_lans  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_lans argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_lans  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_lans argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_lans  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_lans argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_lan_lans  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_lan_lans argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_agents  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_agents argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_nodes  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_nodes argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_nodes  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_nodes argref=HASH(0x8084949a8)
+GORAN:NewTableRow Tablenam=virt_nodes  argref=HASH(0x8084949a8) 
+GORAN: NewRow table=virt_nodes argref=HASH(0x8084949a8)
+Parser done! 18:42:37:373652
+Precomputing visualization ...
+Image rendering proceeding in background mode ...
+Setting up static routes (if requested) ... 
+Generating topomap ...
+Doing a pre-assign: '/usr/testbed/bin/vtopgen -p DeterTest t3zcxc' ...
+GORAN: NewRow table=virt_nodes argref=HASH(0x808660bb8)
+GORAN: NewRow table=virt_nodes argref=HASH(0x808661450)
+GORAN: NewRow table=virt_nodes argref=HASH(0x8086612a0)
+GORAN: NewRow table=virt_agents argref=HASH(0x808728ed0)
+GORAN: NewRow table=virt_agents argref=HASH(0x808901be8)
+GORAN: NewRow table=virt_agents argref=HASH(0x808905120)
+GORAN: NewRow table=virt_agents argref=HASH(0x8089050a8)
+GORAN: NewRow table=virt_agents argref=HASH(0x808905048)
+GORAN: NewRow table=virt_agents argref=HASH(0x808905fa8)
+GORAN: NewRow table=virt_agents argref=HASH(0x808905fd8)
+GORAN: NewRow table=virt_agents argref=HASH(0x808935060)
+GORAN: NewRow table=virt_agents argref=HASH(0x8089351f8)
+GORAN: NewRow table=virt_lans argref=HASH(0x808932cc0)
+GORAN: NewRow table=virt_lans argref=HASH(0x808908090)
+GORAN: NewRow table=virt_lans argref=HASH(0x808908018)
+GORAN: NewRow table=virt_lan_lans argref=HASH(0x808932de0)
+Minimum nodes   = 3
+Maximum nodes   = 3
+Writing environment strings ...
+Setting up additional program agent support ...
+Setting up additional network agent support ...
+GORAN: NewRow table=virt_lans argref=HASH(0x807da4918)
+GORAN: NewRow table=virt_lans argref=HASH(0x807da4a80)
+GORAN: NewRow table=virt_lans argref=HASH(0x807da4a38)
+GORAN: NewRow table=virt_lan_lans argref=HASH(0x807d15bb8)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de5168)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de51e0)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de52a0)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de5360)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de55d0)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de5660)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de54b0)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de5720)
+GORAN: NewRow table=virt_agents argref=HASH(0x807de58b8)
+GORAN: NewRow table=virt_nodes argref=HASH(0x807de9d50)
+GORAN: NewRow table=virt_nodes argref=HASH(0x807de9d98)
+GORAN: NewRow table=virt_nodes argref=HASH(0x807de9ee8)
+Writing program agent info ...
+Pre run finished. 18:42:39:145976
+Running 'tbreport -b DeterTest t3zcxc'

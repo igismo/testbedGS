@@ -1,0 +1,6 @@
+# nodes: vname,links
+nodeA,lan0:10.1.1.2
+nodeB,lan0:10.1.1.3
+nodeC,lan0:10.1.1.4
+# lans: vname,mask,cost
+lan0,255.255.255.0,1
