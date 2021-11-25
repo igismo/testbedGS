@@ -32,10 +32,10 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-	"testbedGS/common/tbMessages"
-	"testbedGS/common/tbMsgUtils"
-	"testbedGS/common/tbJsonUtils"
-	"testbedGS/common/tbConfiguration"
+	//"testbedGS/common/tbMessages"
+	//"testbedGS/common/tbMsgUtils"
+	//"testbedGS/common/tbJsonUtils"
+	//"testbedGS/common/tbConfiguration"
 )
 //=======================================================================
 // Early work to test some options for officeMaster console
@@ -114,15 +114,15 @@ func startConsole(consoleInput <-chan string) {
 //
 //=======================================================================
 func sendSwapInMsg(project, experiment,userName, fileName string) {
-	expMgrName := tbConfig.TBexpMgrName
+	expMgrName := TBexpMgrName
 	expMgrFullName := TBlocateMngr(sliceOfMgrs, expMgrName)
 	if expMgrFullName != nil && expMgrFullName.Up == true {
-		swapIn := tbMessages.SwapIn{Project:project, Experiment:experiment,
+		swapIn := SwapIn{Project:project, Experiment:experiment,
 						UserName:userName, FileName: fileName}
-		messageBody, _ := tbJsonUtils.TBmarshal(swapIn)
-		newMsg := tbMsgUtils.TBswapinMsg(myFullName, expMgrFullName.Name, string(messageBody))
+		messageBody, _ := TBmarshal(swapIn)
+		newMsg := TBswapinMsg(myFullName, expMgrFullName.Name, string(messageBody))
 
-		tbMsgUtils.TBsendMsgOut(newMsg, expMgrFullName.Name.Address, myConnection)
+		TBsendMsgOut(newMsg, expMgrFullName.Name.Address, myConnection)
 	} else {
 		fmt.Println("Console: Exp Master not available - try later")
 	}
@@ -131,15 +131,15 @@ func sendSwapInMsg(project, experiment,userName, fileName string) {
 //
 //=======================================================================
 func sendSwapOutMsg(project, experiment,userName, fileName string) {
-	expMgrName := tbConfig.TBexpMgrName
+	expMgrName := TBexpMgrName
 	expMgrFullName := TBlocateMngr(sliceOfMgrs, expMgrName)
 	if expMgrFullName != nil && expMgrFullName.Up == true {
-		swapOut := tbMessages.SwapOut{Project:project, Experiment:experiment,
+		swapOut := SwapOut{Project:project, Experiment:experiment,
 			UserName:userName, FileName: fileName}
-		messageBody, _ := tbJsonUtils.TBmarshal(swapOut)
-		newMsg := tbMsgUtils.TBswapoutMsg(myFullName, expMgrFullName.Name, string(messageBody))
+		messageBody, _ := TBmarshal(swapOut)
+		newMsg := TBswapoutMsg(myFullName, expMgrFullName.Name, string(messageBody))
 
-		tbMsgUtils.TBsendMsgOut(newMsg, expMgrFullName.Name.Address, myConnection)
+		TBsendMsgOut(newMsg, expMgrFullName.Name.Address, myConnection)
 	} else {
 		fmt.Println("Console: Exp Master not available - try later")
 	}

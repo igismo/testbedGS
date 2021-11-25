@@ -22,7 +22,8 @@
  #*********************************************************************************/
 
 FROM scratch
-FROM alpine
+## FROM alpine
+FROM centos:centos7
 ADD  cacert.pem  /etc/ssl/certs/
 ADD officeMaster /
 CMD ["/officeMaster"]

@@ -32,14 +32,14 @@ import (
     "strconv"
     "time"
     "strings"
-    "testbedGS/common/tbConfiguration"
-    "testbedGS/common/tbMsgUtils"
-    "testbedGS/common/tbMessages"
-    "testbedGS/common/tbJsonUtils"
-    "testbedGS/common/tbNetUtils"
-    "testbedGS/common/tbLogUtils"
+    //"tbConfig"
+    //"tbMsgUtils"
+    //"tbMessages"
+    //"tbJsonUtils"
+    //"tbNetUtils"
+    //"tbLogUtils"
+    //"tbUtils"
     "io/ioutil"
-    "testbedGS/common/tbUtils"
 )
 
 // OFFICE MANAGER STATES
@@ -49,10 +49,10 @@ const STATE_CONNECTED  = "STATE_CONNECTED"
 const STATE_UP         = "STATE_UP"
 const STATE_DOWN       = "STATE_DOWN"
 
-var myState                    =  STATE_INIT
-var myName                     = tbConfig.TBofficeMgrName
-var myFullName                  tbMessages.NameId // struct - needs init
-var myCreationTime             = strconv.FormatInt(tbMsgUtils.TBtimestamp(),10)
+var myState                    = STATE_INIT
+var myName                     = TBofficeMgrName
+var myFullName                  NameId // struct - needs init
+var myCreationTime             = strconv.FormatInt(TBtimestamp(),10)
 var myUdpAddress  *net.UDPAddr = nil
 var myIpAddress                = ""
 var myConnection  *net.UDPConn = nil
@@ -65,9 +65,9 @@ var myRecvControlChannel chan []byte = nil // to send control msgs to Recv Threa
 var myTimerChannel       chan string = nil // timer ticks
 var myReceiveCount   = 0
 
-var Log = tbLogUtils.LogInstance{}
+var Log = LogInstance{}
 var myTicker      *time.Ticker = nil
-var sliceOfMgrs [] tbMessages.TBmgr
+var sliceOfMgrs [] TBmgr
 
 var mysqlMasterIP = ""
 
@@ -76,14 +76,14 @@ var mysqlMasterIP = ""
 // Note that the log is created, but logging is stil outstanding work
 //=======================================================================
 func main() {
-    tbLogUtils.LogLicenseNotice()
+    LogLicenseNotice()
 
     fmt.Println(myName,"========= START =========================")
 
     Log.DebugLog   = true
     Log.WarningLog = true
     Log.ErrorLog   = true
-    tbLogUtils.CreateLog(&Log, myName)
+    CreateLog(&Log, myName)
     Log.Warning(&Log,"this will be printed anyway")
 
     officeMgrSetState(STATE_INIT)
@@ -137,10 +137,10 @@ func main() {
 func officeMasterInit() {
     var err error = nil
 
-    mysqlMasterIP = tbNetUtils.GetMastersIP(tbConfig.TBmysqlMasterName)
+    mysqlMasterIP = GetMastersIP(TBmysqlMasterName)
     if mysqlMasterIP != "" {
        fmt.Println("INIT TB-MYSQLMASTER is at ", mysqlMasterIP)
-        tbNetUtils.Ping(mysqlMasterIP, 3)
+        Ping(mysqlMasterIP, 3)
     }
     fmt.Println(myName, "INIT: create channels")
     myTimerChannel       = make(chan string) // Timer ticks
@@ -156,7 +156,7 @@ func officeMasterInit() {
     // conn.WriteToUDP([]byte(daytime), addr)
 
     if myConnection == nil {
-        myUdpAddress, err = net.ResolveUDPAddr("udp", tbConfig.TBofficeMgr)
+        myUdpAddress, err = net.ResolveUDPAddr("udp", TBofficeMgr)
         if err != nil {
             fmt.Println("INIT: ERROR in net.ResolveUDPAddr = ", err)
             fmt.Println("INIT: ERROR locating Office Manager, will retry")
@@ -164,7 +164,7 @@ func officeMasterInit() {
         }
         fmt.Println(myName, "INIT: myUdpAddress=", myUdpAddress)
 
-        myIpAddress = tbNetUtils.GetLocalIp()
+        myIpAddress = GetLocalIp()
         fmt.Println(myName,"INIT: My Local IP=", myIpAddress, " My UDP address=", myUdpAddress)
 
         // conn, err := net.DialUDP("udp", nil, myUdpAddress)
@@ -182,7 +182,7 @@ func officeMasterInit() {
             return
         }
 
-        myFullName = tbMessages.NameId{Name: myName, OsId: os.Getpid(),
+        myFullName = NameId{Name: myName, OsId: os.Getpid(),
             TimeCreated: myCreationTime, Address: *myUdpAddress}
         fmt.Println(myName,"INIT: myFullName=", myFullName)
 
@@ -201,7 +201,7 @@ func periodicFunc(tick time.Time) {
     sendKeepAliveMsg()
     // TODO remove later ... just for test
     if mysqlMasterIP == "" {
-        mysqlMasterIP = tbNetUtils.GetMastersIP(tbConfig.TBmysqlMasterName)
+        mysqlMasterIP = GetMastersIP(TBmysqlMasterName)
         fmt.Println("INIT TB-MYSQLMASTER is at ", mysqlMasterIP)
 
     }
@@ -221,9 +221,9 @@ func sendThread(conn *net.UDPConn, sendChannel, sendControlChannel chan []byte) 
     fmt.Println(myName, "SendThread: Start SEND THRED")
     go func() {
         connection := conn
-        var controlMsg tbMessages.TBmessage
+        var controlMsg TBmessage
         fmt.Println(myName, "SendThread: Ready for Sending")
-        //myControlChannel <- tbMsgUtils.TBConnectedMsg(myCreationTime)
+        //myControlChannel <- TBConnectedMsg(myCreationTime)
 
         for {
             select {
@@ -237,7 +237,7 @@ func sendThread(conn *net.UDPConn, sendChannel, sendControlChannel chan []byte) 
                 }
 
             case ctrlMsg := <- sendControlChannel: //
-                tbJsonUtils.TBunmarshal(ctrlMsg, &controlMsg)
+                TBunmarshal(ctrlMsg, &controlMsg)
                 fmt.Println(myName, "SendThread got control MSG=",controlMsg)
 
                 if strings.Contains(controlMsg.MsgType, "TERMINATE") {
@@ -261,7 +261,7 @@ func recvThread(conn *net.UDPConn, recvChannel, recvControlChannel <-chan []byte
         connection := conn
 
         fmt.Println(myName,"RecvThread: Start Receiving")
-        var controlMsg tbMessages.TBmessage
+        var controlMsg TBmessage
         var oobBuffer [3000] byte
 
         for {
@@ -277,7 +277,7 @@ func recvThread(conn *net.UDPConn, recvChannel, recvControlChannel <-chan []byte
 
             if len(recvControlChannel) != 0 {
                 ctrlMsg := <- recvControlChannel
-                tbJsonUtils.TBunmarshal(ctrlMsg, &controlMsg)
+                TBunmarshal(ctrlMsg, &controlMsg)
                 fmt.Println("RecvThread got CONTROL MSG=",controlMsg)
                 if strings.Contains(controlMsg.MsgType, "TERMINATE") {
                     fmt.Println("RecvThread rcvd control MSG=", controlMsg)
@@ -294,8 +294,8 @@ func recvThread(conn *net.UDPConn, recvChannel, recvControlChannel <-chan []byte
 //=======================================================================
 func handleMessages(message [] byte) {
     //fmt.Println(myName, "HandleMessages: Recv Message in State", myState, "Message=",string(message))
-    msg := new(tbMessages.TBmessage)
-    tbJsonUtils.TBunmarshal(message, &msg)
+    msg := new(TBmessage)
+    TBunmarshal(message, &msg)
     //fmt.Println(myName, "HandleMessages: Recv Message in State", myState, "Type:",msg.MsgType,"From=",msg.MsgSender)
 
     switch myState {
@@ -345,24 +345,24 @@ func handleTimerMessages(message string) {
 func stateUpMessages(message [] byte) {
 
     // Unmarshal
-    msg := new(tbMessages.TBmessage)
-    tbJsonUtils.TBunmarshal(message, &msg)
+    msg := new(TBmessage)
+    TBunmarshal(message, &msg)
 
     switch msg.MsgType {
-    case tbMessages.MSG_TYPE_REGISTER:
+    case MSG_TYPE_REGISTER:
         receiveRegisterMsg(msg)
         break
-    case tbMessages.MSG_TYPE_HELLO:
+    case MSG_TYPE_HELLO:
         sendHelloReplyMsg(msg)
         break
     default:
         break
     }
-    //currentTime := strconv.FormatInt(tbMsgUtils.TBtimestamp(), 10)
+    //currentTime := strconv.FormatInt(TBtimestamp(), 10)
     //replyMessage := "stateUpMessages:Replying to You at " + currentTime + "ms"
     //fmt.Println("REPLY to ", )
     //fmt.Println(myName, "stateUpMessages: REPLY=", replyMessage)
-    //sendBuffer, _ := tbJsonUtils.TBmarshal(replyMessage)
+    //sendBuffer, _ := TBmarshal(replyMessage)
     //myConnection.WriteToUDP(sendBuffer, myUdpAddress)
 
 }
@@ -387,11 +387,11 @@ func checkError(err error) {
 //=======================================================================
 //
 //=======================================================================
-func sendHelloReplyMsg(msg *tbMessages.TBmessage) {
+func sendHelloReplyMsg(msg * TBmessage) {
     remoteUdpAddress := net.UDPAddr{IP: msg.MsgSender.Address.IP,
                         Port: msg.MsgSender.Address.Port}
 
-    replyBuffer := tbMsgUtils.TBhelloReplyMsg(myFullName, msg.MsgSender, string(msg.MsgBody))
+    replyBuffer := TBhelloReplyMsg(myFullName, msg.MsgSender, string(msg.MsgBody))
 
     // fmt.Println("WriteToUdp Reply remoteUdpAddress=", remoteUdpAddress)
     myConnection.WriteToUDP([]byte (replyBuffer), &remoteUdpAddress)
@@ -401,7 +401,7 @@ func sendHelloReplyMsg(msg *tbMessages.TBmessage) {
 //=======================================================================
 func locateMysqlMaster() string {
 fmt.Println("---> Locate MYSQL MASTER")
-    mysqlMasterIP = tbNetUtils.GetMastersIP(tbConfig.TBmysqlMasterName)
+    mysqlMasterIP = GetMastersIP(TBmysqlMasterName)
     //fmt.Println("INIT TB-MYSQLMASTER is at ", mysqlMasterIP)
     if mysqlMasterIP != "" {
         // TODO save address into file .... to be used by www server
@@ -420,12 +420,12 @@ fmt.Println("---> Locate MYSQL MASTER")
 //=======================================================================
 //
 //=======================================================================
-func receiveRegisterMsg(msg *tbMessages.TBmessage) {
+func receiveRegisterMsg(msg *TBmessage) {
     fmt.Println("REGISTER MSG FROM=", msg.MsgSender)
 
     // Unmarshal the message body
-    var theMgr tbMessages.TBmgr
-    tbJsonUtils.TBunmarshal(msg.MsgBody, &theMgr)
+    var theMgr TBmgr
+    TBunmarshal(msg.MsgBody, &theMgr)
 
     fmt.Println("MGR:",theMgr.Name.Name, "STATUS:",theMgr.Up,"ADDRESS:",theMgr.Name.Address,
         "CREATED:",theMgr.Name.TimeCreated, "MSGSRCVD:",theMgr.MsgsRcvd)
@@ -447,7 +447,7 @@ func receiveRegisterMsg(msg *tbMessages.TBmessage) {
 // all known managers including ourselves and the office manager
 // Return nil if row not found
 //============================================================================
-func TBlocateMngr(sliceTable [] tbMessages.TBmgr, mngr string) *tbMessages.TBmgr{
+func TBlocateMngr(sliceTable [] TBmgr, mngr string) *TBmgr{
     for index := range sliceTable {
         if  sliceTable[index].Name.Name == mngr {
             return &sliceTable[index]
@@ -461,7 +461,7 @@ func TBlocateMngr(sliceTable [] tbMessages.TBmgr, mngr string) *tbMessages.TBmgr
 // all known managers including ourselves and the office manager
 // Return nil if row not found
 //============================================================================
-func locateMngr(slice [] tbMessages.TBmgr, mngr string) *tbMessages.TBmgr{
+func locateMngr(slice [] TBmgr, mngr string) *TBmgr{
     for index := range slice {
         if  slice[index].Name.Name == mngr {
             return &slice[index]
@@ -493,22 +493,22 @@ func sendKeepAliveMsg() {
     mysqlIp := locateMysqlMaster()
     if mysqlIp != "" {
         fmt.Println("MYSQL MASTER IP = ", mysqlIp)
-        var mysqlName= tbConfig.TBmysqlMasterName
-        mysqlUdpAddress, _ := net.ResolveUDPAddr("udp", tbConfig.TBmysqlMaster)
+        var mysqlName= TBmysqlMasterName
+        mysqlUdpAddress, _ := net.ResolveUDPAddr("udp", TBmysqlMaster)
 
-        mysqlFullName := tbMessages.NameId{Name: mysqlName, OsId: os.Getpid(),
+        mysqlFullName := NameId{Name: mysqlName, OsId: os.Getpid(),
             TimeCreated: myCreationTime, Address: *mysqlUdpAddress}
 		fmt.Println("MYSQL MASTER FULL NAME+", mysqlFullName)
 		//mysqlFullName.Address.IP.
 
-        mysqlEntry := tbMessages.TBmgr{Name: mysqlFullName, Up: true, LastChangeTime: myCreationTime,
+        mysqlEntry := TBmgr{Name: mysqlFullName, Up: true, LastChangeTime: myCreationTime,
             MsgsSent: 0, LastSentAt: "0", MsgsRcvd: 0, LastRcvdAt: "0"}
         if mysqlStored == 0 {
             sliceOfMgrs = append(sliceOfMgrs, mysqlEntry)
             mysqlStored++
         }
         //  check that the record is there
-        existingMgr, index :=  tbUtils.LocateMaster(sliceOfMgrs, mysqlName)
+        existingMgr, index :=  LocateMaster(sliceOfMgrs, mysqlName)
         if existingMgr != nil { // Update existing mgr/master record
             fmt.Println("UPDATE in sliceOfMgrs MGR=", existingMgr.Name, " Index=", index)
             //sliceOfMgrs[index] = sliceOfMgrs[len(sliceOfMgrs)-1]  // Replace it with the last one.
@@ -524,14 +524,14 @@ func sendKeepAliveMsg() {
     var names = ""
     if len(sliceOfMgrs) > 0 {
         fmt.Println("sendKeepAlive: LENGTH of sliceOfMgrs=", len(sliceOfMgrs))
-        msgBody, _ := tbJsonUtils.TBmarshal(sliceOfMgrs)
+        msgBody, _ := TBmarshal(sliceOfMgrs)
         fmt.Println("sendKeepAlive: LENGTH of msgBody=", len(msgBody))
         for mgrIndex := range sliceOfMgrs {
             receiver := sliceOfMgrs[mgrIndex].Name
             if receiver.Name != myName { // Do not send to self
                 udpAddress := sliceOfMgrs[mgrIndex].Name.Address
-                newMsg := tbMsgUtils.TBkeepAliveMsg(myFullName, receiver, string(msgBody))
-                tbMsgUtils.TBsendMsgOut(newMsg, udpAddress, myConnection)
+                newMsg := TBkeepAliveMsg(myFullName, receiver, string(msgBody))
+                TBsendMsgOut(newMsg, udpAddress, myConnection)
                 names += " " + receiver.Name
             }
         }
