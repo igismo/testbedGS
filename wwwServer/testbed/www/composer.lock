@@ -696,7 +696,7 @@
                 "symfony/console": "~4.0",
                 "symfony/debug": "~4.0",
                 "symfony/finder": "~4.0",
-                "symfony/http-foundation": "~4.0",
+                "symfony/http-foundation": "4.2.12",
                 "symfony/http-kernel": "~4.0",
                 "symfony/process": "~4.0",
                 "symfony/routing": "~4.0",
@@ -3295,7 +3295,7 @@
         },
         {
             "name": "symfony/http-foundation",
-            "version": "v4.0.4",
+            "version": "4.2.12",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/http-foundation.git",
@@ -3365,7 +3365,7 @@
                 "psr/log": "~1.0",
                 "symfony/debug": "~3.4|~4.0",
                 "symfony/event-dispatcher": "~3.4|~4.0",
-                "symfony/http-foundation": "~3.4.4|~4.0.4"
+                "symfony/http-foundation": "4.2.12"
             },
             "conflict": {
                 "symfony/config": "<3.4",
@@ -3624,7 +3624,7 @@
                 "symfony/config": "~3.4|~4.0",
                 "symfony/dependency-injection": "~3.4|~4.0",
                 "symfony/expression-language": "~3.4|~4.0",
-                "symfony/http-foundation": "~3.4|~4.0",
+                "symfony/http-foundation": "4.2.12",
                 "symfony/yaml": "~3.4|~4.0"
             },
             "suggest": {
