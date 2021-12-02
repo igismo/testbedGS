@@ -472,7 +472,7 @@
                 "erusev/parsedown": "~1.7",
                 "ext-mbstring": "*",
                 "ext-openssl": "*",
-                "league/flysystem": "~1.0",
+                "league/flysystem": "1.1.4",
                 "monolog/monolog": "~1.12",
                 "nesbot/carbon": "^1.22.1",
                 "php": "^7.1.3",
