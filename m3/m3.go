@@ -11,6 +11,7 @@
 // use 0 anywhere for default
 // EXAMPLE1: sudo ./aeroMeshNode DroneX 01 192.168.22.2 1201  192.168.1.1 1200
 //=================================================================================
+// SYNAPSE VERSION
 //================================================================================
 package main
 
@@ -29,20 +30,21 @@ import (
 	//"builtin"
 )
 
-const DEBUG_ROLE	    = 0
-const DEBUG_DISCOVERY	= 0
+const DEBUG_ROLE = 0
+const DEBUG_DISCOVERY = 0
 
-var Drone common.M3Info   // all info about the Node
-var Me   *common.TerminalInfo = &Drone.Terminal[0]
-var Log = common.LogInstance{}       // for log file storage
+var Drone common.M3Info // all info about the Node
+var Me *common.TerminalInfo = &Drone.Terminal[0]
+var Log = common.LogInstance{} // for log file storage
 
 // DRONE CONNECTIVITY STATES  ... for now
-const StateAlone 		= "ALONE"
-const StateConnecting 	= "CONNECTING"
-const StateConnected 	= "CONNECTED"
+const StateAlone = "ALONE"
+const StateConnecting = "CONNECTING"
+const StateConnected = "CONNECTED"
+
 // Command from local terminal, or rcvd from ground controller
-const LOCAL_CMD 		= "LOCAL"
-const REMOTE_CMD 		= "REMOTE"
+const LOCAL_CMD = "LOCAL"
+const REMOTE_CMD = "REMOTE"
 const STEPMODE_DISABLED = -1
 
 //====================================================================================
@@ -60,55 +62,56 @@ const STEPMODE_DISABLED = -1
 //====================================================================================
 func InitDroneConfiguration() {
 
-	Me.TerminalName 						= "Node01" // will be overwritten by config
-	Me.TerminalId 				= 1			// will be overwritten by config
-	Me.TerminalIP		= ""
-	Me.TerminalConnectionTimer 		= common.DRONE_KEEPALIVE_TIMER  // 5 sec
-	Me.TerminalKeepAliveRecvTime 	= time.Now()
+	Me.TerminalName = "Node01" // will be overwritten by config
+	Me.TerminalId = 1          // will be overwritten by config
+	Me.TerminalIP = ""
+	Me.TerminalConnectionTimer = common.DRONE_KEEPALIVE_TIMER // 5 sec
+	Me.TerminalKeepAliveRecvTime = time.Now()
 	// Drone.KnownDrones 			= nil // Array of drones and ground stations learned
-	Drone.Channels.CmdChannel 		= nil // so that all local threads can talk back
-	Drone.Channels.UnicastRcvCtrlChannel 	= nil // to send control msgs to Recv Thread
-	Drone.Channels.BroadcastRcvCtrlChannel  = nil
-	Drone.Channels.MulticastRcvCtrlChannel  = nil
+	Drone.Channels.CmdChannel = nil            // so that all local threads can talk back
+	Drone.Channels.UnicastRcvCtrlChannel = nil // to send control msgs to Recv Thread
+	Drone.Channels.BroadcastRcvCtrlChannel = nil
+	Drone.Channels.MulticastRcvCtrlChannel = nil
 
-	Me.TerminalConnection 						= nil
-	Me.TerminalActive 					= true
-	Me.TerminalDiscoveryTimeout			= 5000  // milli sec
-	Me.TerminalReceiveCount 					= 0
-	Me.TerminalSendCount 						= 0
-	Log.DebugLog 						= true
-	Log.WarningLog 						= true
-	Log.ErrorLog 						= true
+	Me.TerminalConnection = nil
+	Me.TerminalActive = true
+	Me.TerminalDiscoveryTimeout = 5000 // milli sec
+	Me.TerminalReceiveCount = 0
+	Me.TerminalSendCount = 0
+	Log.DebugLog = true
+	Log.WarningLog = true
+	Log.ErrorLog = true
 
-	Drone.Channels.UnicastRcvCtrlChannel 	= make(chan []byte) //
-	Drone.Channels.BroadcastRcvCtrlChannel 	= make(chan []byte)
-	Drone.Channels.MulticastRcvCtrlChannel 	= make(chan []byte)
-	Drone.Channels.CmdChannel 				= make(chan []byte) // receive command line cmnds
+	Drone.Channels.UnicastRcvCtrlChannel = make(chan []byte) //
+	Drone.Channels.BroadcastRcvCtrlChannel = make(chan []byte)
+	Drone.Channels.MulticastRcvCtrlChannel = make(chan []byte)
+	Drone.Channels.CmdChannel = make(chan []byte) // receive command line cmnds
 
-	Drone.Connectivity.BroadcastRxAddress	= ":9999"
-	Drone.Connectivity.BroadcastRxPort		= "9999"
-	Drone.Connectivity.BroadcastRxIP		= ""
-	Drone.Connectivity.BroadcastTxPort		= "8888"
-	Drone.Connectivity.BroadcastConnection	= nil
-	Drone.Connectivity.BroadcastTxStruct	= new(net.UDPAddr)
+	Drone.Connectivity.BroadcastRxAddress = ":9999"
+	Drone.Connectivity.BroadcastRxPort = "9999"
+	Drone.Connectivity.BroadcastRxIP = ""
+	Drone.Connectivity.BroadcastTxPort = "8888"
+	Drone.Connectivity.BroadcastConnection = nil
+	Drone.Connectivity.BroadcastTxStruct = new(net.UDPAddr)
 
-	Drone.Connectivity.UnicastRxAddress		= ":8888"
-	Drone.Connectivity.UnicastRxPort		= "8888"
-	Drone.Connectivity.UnicastRxIP			= ""
-	Drone.Connectivity.UnicastTxPort		= "8888"
-	Drone.Connectivity.UnicastRxConnection	= nil
-	Drone.Connectivity.UnicastRxStruct		= nil
-	Drone.Connectivity.UnicastTxStruct		= new(net.UDPAddr)
+	Drone.Connectivity.UnicastRxAddress = ":8888"
+	Drone.Connectivity.UnicastRxPort = "8888"
+	Drone.Connectivity.UnicastRxIP = ""
+	Drone.Connectivity.UnicastTxPort = "8888"
+	Drone.Connectivity.UnicastRxConnection = nil
+	Drone.Connectivity.UnicastRxStruct = nil
+	Drone.Connectivity.UnicastTxStruct = new(net.UDPAddr)
 
-	Drone.GroundIsKnown     = false
-	Drone.GroundUdpPort		= 0
-	Drone.GroundIP			= ""
-	Me.TerminalPort		    = "8888"
-	Drone.GroundIPandPort	= "" //Drone.GroundIP + ":" + Drone.GroundUdpPort
-	Me.TerminalUdpAddrStructure 			= new(net.UDPAddr)
-	Drone.GroundUdpAddrSTR 	= new(net.UDPAddr)
-	Me.TerminalTimeCreated	= time.Now() // strconv.FormatInt(common.TBtimestampNano(), 10)
+	Drone.GroundIsKnown = false
+	Drone.GroundUdpPort = 0
+	Drone.GroundIP = ""
+	Me.TerminalPort = "8888"
+	Drone.GroundIPandPort = "" //Drone.GroundIP + ":" + Drone.GroundUdpPort
+	Me.TerminalUdpAddrStructure = new(net.UDPAddr)
+	Drone.GroundUdpAddrSTR = new(net.UDPAddr)
+	Me.TerminalTimeCreated = time.Now() // strconv.FormatInt(common.TBtimestampNano(), 10)
 }
+
 //====================================================================================
 // InitFromConfigFile() - Set configuration from config file
 //====================================================================================
@@ -156,19 +159,19 @@ func InitFromConfigFile() {
 
 	fmt.Println("BroadcastRxIP             = ", Drone.Connectivity.BroadcastRxIP)
 	fmt.Println("BroadcastRxPort           = ", Drone.Connectivity.BroadcastRxPort)
-	Drone.Connectivity.BroadcastRxAddress		=
+	Drone.Connectivity.BroadcastRxAddress =
 		Drone.Connectivity.BroadcastRxIP + ":" + Drone.Connectivity.BroadcastRxPort
 	fmt.Println("BroadcastRxAddress        = ", Drone.Connectivity.BroadcastRxAddress)
 
 	fmt.Println("UnicastRxIP             = ", Drone.Connectivity.UnicastRxIP)
 	fmt.Println("UnicastRxPort           = ", Drone.Connectivity.UnicastRxPort)
-	Drone.Connectivity.UnicastRxAddress		 =
+	Drone.Connectivity.UnicastRxAddress =
 		Drone.Connectivity.UnicastRxIP + ":" + Drone.Connectivity.UnicastRxPort
 	fmt.Println("UnicastRxAddress        = ", Drone.Connectivity.UnicastRxAddress)
 
 	fmt.Println("BroadcastTxIP             = ", Drone.Connectivity.BroadcastTxIP)
 	fmt.Println("BroadcastTxPort          = ", Drone.Connectivity.BroadcastTxPort)
-	Drone.Connectivity.BroadcastTxAddress	=
+	Drone.Connectivity.BroadcastTxAddress =
 		Drone.Connectivity.BroadcastTxIP + ":" + Drone.Connectivity.BroadcastTxPort
 	fmt.Println("BroadcastTxAddress        = ", Drone.Connectivity.BroadcastTxAddress)
 
@@ -176,6 +179,7 @@ func InitFromConfigFile() {
 	fmt.Println("GroundUdpPort             = ", Drone.GroundUdpPort)
 	fmt.Println("GroundIPandPort           = ", Drone.GroundIPandPort)
 }
+
 //====================================================================================
 // InitFromCommandLine()  READ ARGUMENTS IF ANY
 //====================================================================================
@@ -210,6 +214,7 @@ func InitFromCommandLine() {
 		Drone.GroundIPandPort = os.Args[5] + ":" + os.Args[6]
 	}
 }
+
 //====================================================================================
 //  Initialize my own info in the Drone structure
 //====================================================================================
@@ -220,12 +225,12 @@ func SetFinalDroneInfo() {
 	}
 
 	// TODO memset(&distanceVector, 0, sizeof(distanceVector))
-	Me.TerminalLastChangeTime 	= float64(common.TBtimestampNano() )// time.Now().String()
-	Me.TerminalActive 		= true
-	Me.TerminalState 	= StateAlone
+	Me.TerminalLastChangeTime = float64(common.TBtimestampNano()) // time.Now().String()
+	Me.TerminalActive = true
+	Me.TerminalState = StateAlone
 
 	var bit uint64 = 0x1
-	for j:=0; j<64; j++ {
+	for j := 0; j < 64; j++ {
 		// TODO .. from prev coded, should be just = 0xffffffffffffffff
 		bit <<= 1
 	}
@@ -246,7 +251,7 @@ func InitDroneConnectivity() {
 		fmt.Println("ERROR ResolveUDPAddr: ", err3)
 	} else {
 		Me.TerminalFullName = common.NameId{Name: Me.TerminalName,
-					Address: *Me.TerminalUdpAddrStructure}
+			Address: *Me.TerminalUdpAddrStructure}
 	}
 }
 
@@ -259,6 +264,7 @@ func checkErrorNode(err error) {
 		os.Exit(1)
 	}
 }
+
 //====================================================================================
 //
 //====================================================================================
@@ -272,15 +278,14 @@ func periodicFunc(tick time.Time) {
 
 	currTimeMilliSec := common.TBtimestampMilli()
 
-	for i:=1; i < 5; i++ {
+	for i := 1; i < 5; i++ {
 		if Drone.Terminal[i].TerminalActive == true {
 			elapsedTimeSinceLastSend := currTimeMilliSec - Drone.Terminal[i].TerminalLastHelloSendTime
 			timeSinceLastHelloReceived := currTimeMilliSec - Drone.Terminal[i].TerminalLastHelloReceiveTime
 
 			if timeSinceLastHelloReceived > Me.TerminalHelloTimerLength {
 				Drone.Terminal[i].TerminalActive = false
-			} else
-			if elapsedTimeSinceLastSend >= Me.TerminalHelloTimerLength {
+			} else if elapsedTimeSinceLastSend >= Me.TerminalHelloTimerLength {
 				Drone.Terminal[i].TerminalLastHelloSendTime = currTimeMilliSec
 				// send hello
 			}
@@ -341,7 +346,7 @@ func main() {
 	// START TIMER : Call periodicFunc on every timerTick
 	//================================================================================
 	tick := 300 * time.Millisecond
-	fmt.Println(Me.TerminalName, "MAIN: Starting a new Timer Ticker at ", tick," msec" )
+	fmt.Println(Me.TerminalName, "MAIN: Starting a new Timer Ticker at ", tick, " msec")
 	ticker := time.NewTicker(tick)
 
 	go func() {
@@ -363,7 +368,7 @@ func main() {
 	for {
 		select {
 		case UnicastMsg := <-Drone.Channels.UnicastRcvCtrlChannel:
-			fmt.Println(Me.TerminalName, "MAIN: Unicast MSG in state", Me.TerminalState, "MSG=",string(UnicastMsg))
+			fmt.Println(Me.TerminalName, "MAIN: Unicast MSG in state", Me.TerminalState, "MSG=", string(UnicastMsg))
 			// these include text messages from the ground/controller
 			ControlPlaneMessages(UnicastMsg)
 		case BroadcastMsg := <-Drone.Channels.BroadcastRcvCtrlChannel:
@@ -384,7 +389,7 @@ func main() {
 				// SendTextMsg(stdin)
 				// fmt.Println("Console input sent to ground");
 			}
-		//default:
+			//default:
 			//	fmt.Println("done and exit select")
 		} // EndOfSelect
 	} // EndOfFOR
@@ -392,13 +397,10 @@ func main() {
 	// os.Exit(0)
 }
 
-
-
-
 //====================================================================================
 // ControlPlaneMessages() - handle Control Plane messages
 //====================================================================================
-func ControlPlaneMessages(message  []byte) {
+func ControlPlaneMessages(message []byte) {
 	msg := new(common.Msg)
 	err1 := common.TBunmarshal(message, &msg)
 	if err1 != nil {
@@ -422,11 +424,12 @@ func ControlPlaneMessages(message  []byte) {
 	// First check that the senders id is in valid range
 	if sender == Me.TerminalId || sender < 1 || sender > common.MAX_NODES {
 		println("Sender id WRONG: ", sender, " MsgCode=", msgHeader.MsgCode)
-		return}
+		return
+	}
 	//node 	:= &Drone.NodeList[sender -1]
 	fmt.Println("CHECK MESSAGE CODE ", msgHeader.MsgCode)
 	switch msgHeader.MsgCode {
-	case common.MSG_TYPE_DISCOVERY:     // from another drone
+	case common.MSG_TYPE_DISCOVERY: // from another drone
 		var discoveryMsg = new(common.MsgCodeDiscovery)
 		err := common.TBunmarshal(message, discoveryMsg) //message
 		if err != nil {
@@ -448,7 +451,7 @@ func ControlPlaneMessages(message  []byte) {
 	case common.MSG_TYPE_STATUS_REQ: // command from ground
 		handleGroundStatusRequest(msgHeader, message)
 		break
-	case common.MSG_TYPE_STEP: 		 // from ground
+	case common.MSG_TYPE_STEP: // from ground
 		handleGroundStepMsg(msgHeader, message)
 		break
 	case "UPDATE":
@@ -458,44 +461,47 @@ func ControlPlaneMessages(message  []byte) {
 		break
 	}
 }
+
 //====================================================================================
 // ControlPlaneMessage STEP
 //====================================================================================
-func handleGroundStepMsg(msgHeader *common.MessageHeader, message  []byte) {
+func handleGroundStepMsg(msgHeader *common.MessageHeader, message []byte) {
 	/*
-	var stepMsg = new(MsgCodeStep)
-	err := TBunmarshal(message, stepMsg) //message
-	if err != nil {
-		println("ControlPlaneMessages STEP: ERR=", err)
-		return
-	}
-	println("STEP MESSAGE step=", stepMsg.MsgStep.Steps)
-	Drone.StepMode = stepMsg.MsgStep.Steps
+		var stepMsg = new(MsgCodeStep)
+		err := TBunmarshal(message, stepMsg) //message
+		if err != nil {
+			println("ControlPlaneMessages STEP: ERR=", err)
+			return
+		}
+		println("STEP MESSAGE step=", stepMsg.MsgStep.Steps)
+		Drone.StepMode = stepMsg.MsgStep.Steps
 	*/
 }
+
 //====================================================================================
 // ControlPlaneMessage STATUS REQ
 //====================================================================================
-func handleGroundStatusRequest(msgHeader *common.MessageHeader, message  []byte) {
+func handleGroundStatusRequest(msgHeader *common.MessageHeader, message []byte) {
 	//fmt.Println("...... STATUS REQUEST MESSAGE ................")
 	fmt.Println("...... STATUS REQUEST: srcIP=", msgHeader.SrcIP, " SrcMAC=", msgHeader.SrcMAC,
-				" DstID=", msgHeader.DstId, " SrcID=", msgHeader.SrcId)
+		" DstID=", msgHeader.DstId, " SrcID=", msgHeader.SrcId)
 
 	// REPLY
 	sendUnicastStatusReplyPacket(msgHeader)
 }
+
 //====================================================================================
 // ControlPlaneMessage   GROUNDINFO
 //====================================================================================
-func handleGroundInfoMsg(msgHeader *common.MessageHeader, message  []byte) {
+func handleGroundInfoMsg(msgHeader *common.MessageHeader, message []byte) {
 	var err error
 	// TODO  ... add to msg the playing field size .... hmmm ?? relation to random etc
-	Drone.GroundFullName.Name	= msgHeader.SrcName //.DstName
-	Drone.GroundIP 				= msgHeader.SrcIP
-	Drone.GroundIPandPort 		= string(msgHeader.SrcIP) + ":" + msgHeader.SrcPort
-	myPort,_ := strconv.Atoi(msgHeader.SrcPort)
-	Drone.GroundUdpPort 		= myPort
-	Drone.GroundIsKnown 		= true //msg.GroundUp
+	Drone.GroundFullName.Name = msgHeader.SrcName //.DstName
+	Drone.GroundIP = msgHeader.SrcIP
+	Drone.GroundIPandPort = string(msgHeader.SrcIP) + ":" + msgHeader.SrcPort
+	myPort, _ := strconv.Atoi(msgHeader.SrcPort)
+	Drone.GroundUdpPort = myPort
+	Drone.GroundIsKnown = true //msg.GroundUp
 
 	// Drone.GroundUdpAddrSTR.IP = msg.TxIP;
 	//fmt.Println(TERMCOLOR, "... GROUNDINFO: Name=", Drone.GroundFullName.Name,
@@ -511,7 +517,7 @@ func handleGroundInfoMsg(msgHeader *common.MessageHeader, message  []byte) {
 	//Drone.GroundUdpAddrSTR.IP	 = Drone.GroundIP // net.IP(Drone.GroundIP)
 
 	//fmt.Println("1 Drone.GroundUdpAddrSTR=", Drone.GroundUdpAddrSTR)
-	myPort,_ = strconv.Atoi(msgHeader.DstPort)
+	myPort, _ = strconv.Atoi(msgHeader.DstPort)
 	Drone.GroundUdpAddrSTR = &net.UDPAddr{IP: net.ParseIP(msgHeader.DstIP), Port: myPort}
 	Drone.GroundFullName = common.NameId{Name: msgHeader.DstName, Address: *Drone.GroundUdpAddrSTR}
 	//fmt.Println("2 Drone.GroundUdpAddrSTR=", Drone.GroundUdpAddrSTR)
@@ -524,7 +530,7 @@ func handleGroundInfoMsg(msgHeader *common.MessageHeader, message  []byte) {
 		// fmt.Println("GROUND INFO: Name=", Drone.GroundFullName.Name, "  IP:Port=", Drone.GroundIPandPort)
 	}
 }
-func xParseIP(s string) (string) {
+func xParseIP(s string) string {
 	ip, _, err := net.SplitHostPort(s)
 	if err == nil {
 		return ip //, nil
@@ -537,11 +543,12 @@ func xParseIP(s string) (string) {
 
 	return ip2.String() //, nil
 }
+
 //====================================================================================
 // Handle DISCOVERY messages in all states
 //====================================================================================
 func ControlPlaneProcessDiscoveryMessage(msgHeader *common.MessageHeader,
-									discoveryMsg *common.DiscoveryMsgBody){
+	discoveryMsg *common.DiscoveryMsgBody) {
 	//fmt.Println("Discovery MSG in state ", Drone.DroneState)
 	switch Me.TerminalState {
 	case StateAlone:
@@ -556,11 +563,12 @@ func ControlPlaneProcessDiscoveryMessage(msgHeader *common.MessageHeader,
 	default:
 	}
 }
+
 //==========================================================================
 //
 //===========================================================================
 func stateConnectedDiscoveryMessage(msgHeader *common.MessageHeader,
-						discoveryMsg  *common.DiscoveryMsgBody) {
+	discoveryMsg *common.DiscoveryMsgBody) {
 	sender := msgHeader.SrcId
 	if sender < 1 || sender > 4 || sender == Me.TerminalId {
 		// fmt.Println("DISCARD MSG: invalid senderId=", sender)
@@ -569,21 +577,21 @@ func stateConnectedDiscoveryMessage(msgHeader *common.MessageHeader,
 	node := &Drone.M2Terminal[sender-1]
 
 	// update info for the sending drone
-	node.TerminalName					= msgHeader.SrcName
-	node.TerminalId						= msgHeader.SrcId
-	node.TerminalIP						= msgHeader.SrcIP
-	node.TerminalMac					= msgHeader.SrcMAC
-	node.TerminalPort					= msgHeader.SrcPort
-	node.TerminalNextMsgSeq         	= msgHeader.SrcSeq
+	node.TerminalName = msgHeader.SrcName
+	node.TerminalId = msgHeader.SrcId
+	node.TerminalIP = msgHeader.SrcIP
+	node.TerminalMac = msgHeader.SrcMAC
+	node.TerminalPort = msgHeader.SrcPort
+	node.TerminalNextMsgSeq = msgHeader.SrcSeq
 
 	//node.TerminalTimeCreated			= discoveryMsg.TimeCreated // incarnation #
-	node.TerminalLastChangeTime			= discoveryMsg.LastChangeTime
-	node.TerminalActive					= discoveryMsg.NodeActive
-	node.TerminalMsgsSent 				= discoveryMsg.MsgsSent
-	node.TerminalMsgsRcvd 				= discoveryMsg.MsgsRcvd
+	node.TerminalLastChangeTime = discoveryMsg.LastChangeTime
+	node.TerminalActive = discoveryMsg.NodeActive
+	node.TerminalMsgsSent = discoveryMsg.MsgsSent
+	node.TerminalMsgsRcvd = discoveryMsg.MsgsRcvd
 	//node.TerminalMsgLastSentAt			= discoveryMsg.MsgLastSentAt
 
-	node.TerminalMsgLastRcvdAt  		= time.Now() // TBtimestampNano() // time.Now()
+	node.TerminalMsgLastRcvdAt = time.Now() // TBtimestampNano() // time.Now()
 	//Drone.LastFrameRecvd[sender -1] 	= time.Now().String()
 
 	// TODO:
@@ -601,7 +609,7 @@ func stateConnectedDiscoveryMessage(msgHeader *common.MessageHeader,
 	// Remember all node we learned about:
 	// TODO Hmm ... should we forget those deleted by sender TODO
 
-/* // GORAN Mar05 comment out
+	/* // GORAN Mar05 comment out
 	if node.NodeRole == BASE_STATION {
 		//fmt.Println("Updated BaseStationList=", Me.BaseStationList.M_Mask)
 		BMaddID(&Me.BaseStationList, int(node.NodeId - 1)) //nodeId)
@@ -611,32 +619,33 @@ func stateConnectedDiscoveryMessage(msgHeader *common.MessageHeader,
 		BMaddID(&Me.SubscriberList, int(node.NodeId -1)) //.addID(nodeId);
 		//fmt.Println("Updated SubscriberList=", Me.SubscriberList.M_Mask)
 	}
-*/
-	node.TerminalActive =  true
+	*/
+	node.TerminalActive = true
 
 	if Drone.GroundIsKnown {
 
 		// did this DISCOVERY reach the ground as well
-	/*
-		if node.NodeDistanceToGround > Drone.GroundRadioRange {
-			fmt.Println("=== NEED TO FORWARD, OTHER NODE ", int(node.NodeDistanceToGround),
-				" AWAY FROM GROUND, Ground at ", Drone.GroundRadioRange)
-			theNode, distance := FindShortestConnectionToGround()
-			fmt.Println("====== Me=", Me.NodeId, " MY DISTANCE=",Me.NodeDistanceToGround,
-				" HIS DISTANCE=", node.NodeDistanceToGround," SHORTEST=", distance,
-				" Forwarder=", theNode.NodeId)
-			if Me == theNode && Me.NodeDistanceToGround <= Drone.GroundRadioRange {
-				fmt.Println("====== I AM THE FORWARDER ===========================")
-				// forward the DISCOVERY as UNICAST to GROUND
-				forwardUnicastDiscoveryPacket(msgHeader, discoveryMsg, int(distance))
+		/*
+			if node.NodeDistanceToGround > Drone.GroundRadioRange {
+				fmt.Println("=== NEED TO FORWARD, OTHER NODE ", int(node.NodeDistanceToGround),
+					" AWAY FROM GROUND, Ground at ", Drone.GroundRadioRange)
+				theNode, distance := FindShortestConnectionToGround()
+				fmt.Println("====== Me=", Me.NodeId, " MY DISTANCE=",Me.NodeDistanceToGround,
+					" HIS DISTANCE=", node.NodeDistanceToGround," SHORTEST=", distance,
+					" Forwarder=", theNode.NodeId)
+				if Me == theNode && Me.NodeDistanceToGround <= Drone.GroundRadioRange {
+					fmt.Println("====== I AM THE FORWARDER ===========================")
+					// forward the DISCOVERY as UNICAST to GROUND
+					forwardUnicastDiscoveryPacket(msgHeader, discoveryMsg, int(distance))
+				}
+			} else {
+				//fmt.Println("==NODE ", node.NodeId, " CAN REACH GROUND AT",node.DistanceToGround ,
+				//	" Ground at ", Drone.GroundRadioRange)
 			}
-		} else {
-			//fmt.Println("==NODE ", node.NodeId, " CAN REACH GROUND AT",node.DistanceToGround ,
-			//	" Ground at ", Drone.GroundRadioRange)
-		}
-	 */
+		*/
 	}
 }
+
 /*
 func FindShortestConnectionToGround() (*common.NodeInfo, float64) {
 	var theNode *common.NodeInfo = nil
@@ -651,7 +660,7 @@ func FindShortestConnectionToGround() (*common.NodeInfo, float64) {
 	}
 	return theNode, distance
 }
- */
+*/
 //====================================================================================
 // Handle messages received in the CONNECTED state
 //====================================================================================
@@ -663,9 +672,12 @@ func RemoteCommandMessages(msg *common.Msg) {
 		var cmd common.LinuxCommand
 		cmd = cmds[cmdIndex]
 		err := RunLinuxCommand(REMOTE_CMD, cmd.Cmd, cmd.Par1, cmd.Par2, cmd.Par3, cmd.Par4, cmd.Par5, cmd.Par6)
-		if err != nil {fmt.Printf("%T\n", err)}
+		if err != nil {
+			fmt.Printf("%T\n", err)
+		}
 	}
 }
+
 //=======================================================================
 //
 //=======================================================================
@@ -680,16 +692,17 @@ func LocalCommandMessages(cmdText string) {
 		Me.TerminalActive = false
 	default:
 	}
-	fmt.Println("RCVD CONSOLE INPUT =", cmdText, " DRONE ACTIVE=", Me.TerminalActive )
-// TODO figure out the bellow line
+	fmt.Println("RCVD CONSOLE INPUT =", cmdText, " DRONE ACTIVE=", Me.TerminalActive)
+	// TODO figure out the bellow line
 	//err := RunLinuxCommand(LOCAL_CMD, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6])
 	//if err != nil {fmt.Printf("%T\n", err)}
 
 }
+
 //=======================================================================
 //
 //=======================================================================
-func RunLinuxCommand(origin, Cmd,Par1,Par2,Par3,Par4,Par5,Par6 string) error {
+func RunLinuxCommand(origin, Cmd, Par1, Par2, Par3, Par4, Par5, Par6 string) error {
 	//fmt.Println("RCVD CMD ", cmdIndex, " =",cmd)
 	// fmt.Println("cmd=", cmd.Cmd, " ", cmd.Par1, " ", cmd.Par2, " ", cmd.Par3, " ", cmd.Par4, " ", cmd.Par5, " ", cmd.Par6)
 	//cmd.Output() → run it, wait, get output
@@ -709,7 +722,7 @@ func RunLinuxCommand(origin, Cmd,Par1,Par2,Par3,Par4,Par5,Par6 string) error {
 	//	fmt.Printf("CMD OUTPUT=",string(output))
 	//	// SEND REEPLY, OR MAYBE COMBINED ALL FIRST
 	//}
-	fmt.Println(origin, " CMD= ",Cmd," ", Par1 , Par2, " ", Par3, " ", Par4,
+	fmt.Println(origin, " CMD= ", Cmd, " ", Par1, Par2, " ", Par3, " ", Par4,
 		" ", Par5, " ", Par6, " :  RESULT:", string(output), "  ERR:", err)
 	return err
 }
@@ -722,39 +735,37 @@ func changeState(newState string) {
 	Me.TerminalState = newState
 }
 
-
-
 //====================================================================================
 //  Format and send DISCOVERY msg
 //====================================================================================
 func sendBroadcastDiscoveryPacket() {
 	// ... done in updateConnectivity ...MoveNode(Me)
 	//Me.TerminalMsgLastSentAt = float64(common.TBtimestampNano()) // time.Now() //TBtimestampNano()
-		//strconv.FormatInt(TBtimestampNano(), 10)
+	//strconv.FormatInt(TBtimestampNano(), 10)
 
 	dstPort := Drone.Connectivity.BroadcastTxPort
 	// TODO add heightFromEarthCenter as configuration ?? what if it wobbles?
 	// timeNow := time.Now()
 	msgHdr := common.MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     3,
-		TimeSent:   float64(common.TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
-		SrcSeq:  	Me.TerminalNextMsgSeq,
-		SrcMAC:  	Me.TerminalMac,
-		SrcName: 	Me.TerminalName,
-		SrcId:   	Me.TerminalId,  // node ids are 1 based
-		SrcIP:   	Me.TerminalIP,
-		SrcPort: 	Me.TerminalPort,
-		DstName: 	"BROADCAST",
-		DstId:   	0,
-		DstIP:   	Drone.Connectivity.BroadcastTxIP,
-		DstPort: 	dstPort,
-		Hash:     	0,
+		MsgCode:  "DISCOVERY",
+		Ttl:      3,
+		TimeSent: float64(common.TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
+		SrcSeq:   Me.TerminalNextMsgSeq,
+		SrcMAC:   Me.TerminalMac,
+		SrcName:  Me.TerminalName,
+		SrcId:    Me.TerminalId, // node ids are 1 based
+		SrcIP:    Me.TerminalIP,
+		SrcPort:  Me.TerminalPort,
+		DstName:  "BROADCAST",
+		DstId:    0,
+		DstIP:    Drone.Connectivity.BroadcastTxIP,
+		DstPort:  dstPort,
+		Hash:     0,
 	}
 	discBody := common.DiscoveryMsgBody{
-		NodeActive:     Me.TerminalActive,
-		MsgsSent:       Me.TerminalMsgsSent,
-		MsgsRcvd:       Me.TerminalMsgsRcvd,
+		NodeActive: Me.TerminalActive,
+		MsgsSent:   Me.TerminalMsgsSent,
+		MsgsRcvd:   Me.TerminalMsgsRcvd,
 	}
 	myMsg := common.MsgCodeDiscovery{
 		MsgHeader:    msgHdr,
@@ -767,44 +778,45 @@ func sendBroadcastDiscoveryPacket() {
 	common.ControlPlaneBroadcastSend(Drone.Connectivity, msg, Drone.Connectivity.BroadcastTxStruct)
 
 }
+
 //=================================================================================
 //=================================================================================
 func forwardUnicastDiscoveryPacket(msgHeader *common.MessageHeader,
-			discoveryMsg  *common.DiscoveryMsgBody, groundDistance int) {
+	discoveryMsg *common.DiscoveryMsgBody, groundDistance int) {
 	// groundDistance - from this sender to ground, not from origin
 	// use the header fields from original msg, except distance
 	port := Drone.Connectivity.UnicastTxPort
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
 	msgHdr := common.MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     	1,
-		TimeSent: 	msgHeader.TimeSent,
-		SrcSeq:  	msgHeader.SrcSeq,
-		SrcRole: 	msgHeader.SrcRole,
-		SrcMAC:  	msgHeader.SrcMAC,
-		SrcName: 	msgHeader.SrcName,
-		SrcId:   	msgHeader.SrcId,  // node ids are 1 based
-		SrcIP:   	msgHeader.SrcIP,
-		SrcPort: 	msgHeader.SrcPort,
-		DstName: 	"UNICAST",
-		DstId:   	0,
-		DstIP:   	Drone.GroundIP,
-		DstPort: 	port,
-		GroundRange:	groundDistance, // use my distance
-		Hash:     	0,
+		MsgCode:     "DISCOVERY",
+		Ttl:         1,
+		TimeSent:    msgHeader.TimeSent,
+		SrcSeq:      msgHeader.SrcSeq,
+		SrcRole:     msgHeader.SrcRole,
+		SrcMAC:      msgHeader.SrcMAC,
+		SrcName:     msgHeader.SrcName,
+		SrcId:       msgHeader.SrcId, // node ids are 1 based
+		SrcIP:       msgHeader.SrcIP,
+		SrcPort:     msgHeader.SrcPort,
+		DstName:     "UNICAST",
+		DstId:       0,
+		DstIP:       Drone.GroundIP,
+		DstPort:     port,
+		GroundRange: groundDistance, // use my distance
+		Hash:        0,
 	}
 
 	discBody := common.DiscoveryMsgBody{
-		TimeCreated:	discoveryMsg.TimeCreated,
-		LastChangeTime:	discoveryMsg.LastChangeTime,
+		TimeCreated:    discoveryMsg.TimeCreated,
+		LastChangeTime: discoveryMsg.LastChangeTime,
 		NodeActive:     discoveryMsg.NodeActive,
 		MsgsSent:       discoveryMsg.MsgsSent,
 		MsgsRcvd:       discoveryMsg.MsgsRcvd,
-		MsgLastSentAt:	discoveryMsg.MsgLastSentAt,
+		MsgLastSentAt:  discoveryMsg.MsgLastSentAt,
 		MsgLastRcvdAt:  discoveryMsg.MsgLastRcvdAt,
-		Gateways:	    discoveryMsg.Gateways, 		// Me.GatewayList.M_Mask,
-		Subscribers:    discoveryMsg.Subscribers, 	// Me.SubscriberList.M_Mask,
-		BaseStations:   discoveryMsg.BaseStations, 	// Me.BaseStationList.M_Mask,
+		Gateways:       discoveryMsg.Gateways,     // Me.GatewayList.M_Mask,
+		Subscribers:    discoveryMsg.Subscribers,  // Me.SubscriberList.M_Mask,
+		BaseStations:   discoveryMsg.BaseStations, // Me.BaseStationList.M_Mask,
 
 	}
 	myMsg := common.MsgCodeDiscovery{
@@ -817,6 +829,7 @@ func forwardUnicastDiscoveryPacket(msgHeader *common.MessageHeader,
 	common.ControlPlaneUnicastSend(Drone.Connectivity, msg,
 		Drone.GroundIP+":"+Drone.Connectivity.UnicastTxPort)
 }
+
 //=================================================================================
 //=================================================================================
 func sendUnicastStatusReplyPacket(msgHeader *common.MessageHeader) {
@@ -826,25 +839,25 @@ func sendUnicastStatusReplyPacket(msgHeader *common.MessageHeader) {
 	// port, _ :=strconv.Atoi(Drone.UnicastTxPort)
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
 	msgHdr := common.MessageHeader{
-		MsgCode:	"STATUS_REPLY",
-		Ttl:     	1,
-		TimeSent: 	float64(common.TBtimestampNano()),
-		SrcSeq:  	Me.TerminalNextMsgSeq,
-		SrcMAC:  	Me.TerminalMac,
-		SrcName: 	Me.TerminalName,
-		SrcId:   	Me.TerminalId,  // node ids are 1 based
-		SrcIP:   	Me.TerminalIP,
-		SrcPort: 	Me.TerminalPort,
-		DstName: 	"UNICAST",
-		DstId:   	msgHeader.SrcId,
-		DstIP:   	msgHeader.SrcIP,
-		DstPort: 	msgHeader.SrcPort,
-		Hash:     	0,
+		MsgCode:  "STATUS_REPLY",
+		Ttl:      1,
+		TimeSent: float64(common.TBtimestampNano()),
+		SrcSeq:   Me.TerminalNextMsgSeq,
+		SrcMAC:   Me.TerminalMac,
+		SrcName:  Me.TerminalName,
+		SrcId:    Me.TerminalId, // node ids are 1 based
+		SrcIP:    Me.TerminalIP,
+		SrcPort:  Me.TerminalPort,
+		DstName:  "UNICAST",
+		DstId:    msgHeader.SrcId,
+		DstIP:    msgHeader.SrcIP,
+		DstPort:  msgHeader.SrcPort,
+		Hash:     0,
 	}
 
 	statusReplyBody := common.StatusReplyMsgBody{
 		//TimeCreated:	Me.TerminalTimeCreated,
-		LastChangeTime:	Me.TerminalLastChangeTime,
+		LastChangeTime: Me.TerminalLastChangeTime,
 		NodeActive:     Me.TerminalActive,
 		MsgsSent:       Me.TerminalMsgsSent,
 		MsgsRcvd:       Me.TerminalMsgsRcvd,
@@ -852,7 +865,7 @@ func sendUnicastStatusReplyPacket(msgHeader *common.MessageHeader) {
 	}
 
 	myMsg := common.MsgCodeStatusReply{
-		MsgHeader:    msgHdr,
+		MsgHeader:      msgHdr,
 		MsgStatusReply: statusReplyBody,
 	}
 	Me.TerminalNextMsgSeq++
@@ -860,6 +873,7 @@ func sendUnicastStatusReplyPacket(msgHeader *common.MessageHeader) {
 
 	common.ControlPlaneUnicastSend(Drone.Connectivity, msg, Drone.GroundIP+":"+Drone.Connectivity.UnicastTxPort)
 }
+
 //=================================================================================
 //=================================================================================
 func sendUnicastDiscoveryPacket(unicastIP string, distance int) {
@@ -868,26 +882,26 @@ func sendUnicastDiscoveryPacket(unicastIP string, distance int) {
 	port := Drone.Connectivity.UnicastTxPort //   strconv.Atoi(Drone.Connectivity.UnicastTxPort)
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
 	msgHdr := common.MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     	3,
-		TimeSent: 	float64(common.TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
-		SrcSeq:  	Me.TerminalNextMsgSeq,
-		SrcMAC:  	Me.TerminalMac,
-		SrcName: 	Me.TerminalName,
-		SrcId:   	Me.TerminalId,  // node ids are 1 based
-		SrcIP:   	Me.TerminalIP,
-		SrcPort: 	Me.TerminalPort,
-		DstName: 	"UNICAST",
-		DstId:   	0,
-		DstIP:   	Drone.Connectivity.BroadcastTxIP,
-		DstPort: 	port,
-		Hash:     	0,
+		MsgCode:  "DISCOVERY",
+		Ttl:      3,
+		TimeSent: float64(common.TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
+		SrcSeq:   Me.TerminalNextMsgSeq,
+		SrcMAC:   Me.TerminalMac,
+		SrcName:  Me.TerminalName,
+		SrcId:    Me.TerminalId, // node ids are 1 based
+		SrcIP:    Me.TerminalIP,
+		SrcPort:  Me.TerminalPort,
+		DstName:  "UNICAST",
+		DstId:    0,
+		DstIP:    Drone.Connectivity.BroadcastTxIP,
+		DstPort:  port,
+		Hash:     0,
 	}
 
 	discBody := common.DiscoveryMsgBody{
-		NodeActive:     Me.TerminalActive,
-		MsgsSent:       Me.TerminalMsgsSent,
-		MsgsRcvd:       Me.TerminalMsgsRcvd,
+		NodeActive: Me.TerminalActive,
+		MsgsSent:   Me.TerminalMsgsSent,
+		MsgsRcvd:   Me.TerminalMsgsRcvd,
 	}
 	myMsg := common.MsgCodeDiscovery{
 		MsgHeader:    msgHdr,
