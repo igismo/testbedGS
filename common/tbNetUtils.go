@@ -31,14 +31,14 @@ func MacAddressToByte(macAddress string) []byte {
 func GetLocalIp() (string, string) {
 	var HardwareName string
 	netInterfaceAddresses, err := net.InterfaceAddrs()
-	for _,ip1 := range netInterfaceAddresses {
+	for _, ip1 := range netInterfaceAddresses {
 		fmt.Println("IP=", ip1)
 	}
 	if err == nil { // no error
 		for _, netInterfaceAddress := range netInterfaceAddresses {
 			networkIp, ok := netInterfaceAddress.(*net.IPNet)
 			//fmt.Println("GetIP: ", networkIp.IP.String)
-			if strings.Contains( networkIp.IP.String(),"169.") == false {
+			if strings.Contains(networkIp.IP.String(), "169.") == false {
 
 				if ok && !networkIp.IP.IsLoopback() && networkIp.IP.To4() != nil {
 					ip := networkIp.IP.String()

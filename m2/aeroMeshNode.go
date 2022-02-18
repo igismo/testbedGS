@@ -32,23 +32,25 @@ import (
 	//common "./common"              // Windows Versionls
 	//"compress/gzip"
 )
+
 //"github.com/spf13/viper"
 // c "../AeroMeshNode/config.yml"
 
-const DEBUG_ROLE	= 0
-const DEBUG_DISCOVERY	= 0
+const DEBUG_ROLE = 0
+const DEBUG_DISCOVERY = 0
 
 var Drone DroneInfo     // all info about me
 var Me *NodeInfo = nil  // pointer to my own NodeInfo in NodeList[]
 var Log = LogInstance{} // for log file storage
 
 // DRONE CONNECTIVITY STATES  ... for now
-const StateAlone 		= "ALONE"
-const StateConnecting 	= "CONNECTING"
-const StateConnected 	= "CONNECTED"
+const StateAlone = "ALONE"
+const StateConnecting = "CONNECTING"
+const StateConnected = "CONNECTED"
+
 // Command from local terminal, or rcvd from ground controller
-const LOCAL_CMD 		= "LOCAL"
-const REMOTE_CMD 		= "REMOTE"
+const LOCAL_CMD = "LOCAL"
+const REMOTE_CMD = "REMOTE"
 const STEPMODE_DISABLED = -1
 
 //====================================================================================
@@ -103,7 +105,7 @@ func main() {
 		BMclear(&nodex.NewConnectivity)
 		BMclear(&nodex.PreviousConnectivity)
 		var bit uint64 = 0x1
-		for j:=0; j<64; j++ {
+		for j := 0; j < 64; j++ {
 			// TODO .. from prev coded, should be just = 0xffffffffffffffff
 			nodex.BaseStationList.M_BitMask[j] = bit
 			nodex.NewConnectivity.M_BitMask[j] = bit
@@ -146,7 +148,7 @@ func main() {
 	}
 	// TODO: Make this work later
 	if Drone.GroundIsKnown == true {
-		fmt.Println(Drone.DroneName, ":",Drone.DroneFullName, "INIT: GROUND LOCATED")
+		fmt.Println(Drone.DroneName, ":", Drone.DroneFullName, "INIT: GROUND LOCATED")
 		changeState(StateConnected)
 		Drone.DroneKeepAliveRcvdTime = time.Now()
 	}
@@ -155,7 +157,7 @@ func main() {
 	// START TIMER : Call periodicFunc on every timerTick
 	//================================================================================
 	tick := 300 * time.Millisecond
-	fmt.Println(Drone.DroneName, "MAIN: Starting a new Timer Ticker at ", tick," msec" )
+	fmt.Println(Drone.DroneName, "MAIN: Starting a new Timer Ticker at ", tick, " msec")
 	ticker := time.NewTicker(tick)
 	go func() {
 		for t := range ticker.C {
@@ -176,7 +178,7 @@ func main() {
 	for {
 		select {
 		case UnicastMsg := <-Drone.DroneUnicastRcvCtrlChannel:
-			fmt.Println(Drone.DroneName, "MAIN: Unicast MSG in state", Drone.DroneState, "MSG=",string(UnicastMsg))
+			fmt.Println(Drone.DroneName, "MAIN: Unicast MSG in state", Drone.DroneState, "MSG=", string(UnicastMsg))
 			// these include text messages from the ground/controller
 			ControlPlaneMessages(UnicastMsg)
 		case BroadcastMsg := <-Drone.DroneBroadcastRcvCtrlChannel:
@@ -197,9 +199,9 @@ func main() {
 				// SendTextMsg(stdin)
 				// fmt.Println("Console input sent to ground");
 			}
-		case GpsInfoMsg := <- Drone.GpsDeviceChannel:
-				fmt.Println(GpsInfoMsg)
-		//default:
+		case GpsInfoMsg := <-Drone.GpsDeviceChannel:
+			fmt.Println(GpsInfoMsg)
+			//default:
 			//	fmt.Println("done and exit select")
 		} // EndOfSelect
 	} // EndOfFOR
@@ -212,8 +214,10 @@ func main() {
 // TODO add command to change time periods
 //====================================================================================
 func round(val float64) int {
-	if val < 0 { return int(val-0.5) }
-	return int(val+0.5)
+	if val < 0 {
+		return int(val - 0.5)
+	}
+	return int(val + 0.5)
 }
 func periodicFunc(tick time.Time) {
 	// TODO - figure out reasonable timer period to process these two
@@ -237,7 +241,7 @@ func periodicFunc(tick time.Time) {
 	//BMprintIDs(&Me.SubscriberList,  "Tick-OUT: SUBSCRIBERS:")
 	//BMprintIDs(&Me.BaseStationList, "Tick-OUT: BASESTATION:")
 	currTimeMilli := TBtimestampMilli()
-	tt :=  currTimeMilli - Drone.LastDiscoverySent
+	tt := currTimeMilli - Drone.LastDiscoverySent
 
 	if tt > Drone.DiscoveryInterval { // in nano sec
 		sendBroadcastDiscoveryPacket()
@@ -272,6 +276,7 @@ func periodicFunc(tick time.Time) {
 		}
 	}
 }
+
 //====================================================================================
 //
 //====================================================================================
@@ -287,7 +292,7 @@ func getSize(v interface{}) int {
 		s := reflect.ValueOf(v)
 		keys := s.MapKeys()
 		size += int(float64(len(keys)) * 10.79) // approximation from https://golang.org/src/runtime/hashmap.go
-		for i := range(keys) {
+		for i := range keys {
 			size += getSize(keys[i].Interface()) + getSize(s.MapIndex(keys[i]).Interface())
 		}
 	case reflect.String:
@@ -306,7 +311,7 @@ func getSize(v interface{}) int {
 //====================================================================================
 // ControlPlaneMessages() - handle Control Plane messages
 //====================================================================================
-func ControlPlaneMessages(message  []byte) {
+func ControlPlaneMessages(message []byte) {
 	msg := new(Msg)
 	err1 := TBunmarshal(message, &msg)
 	if err1 != nil {
@@ -330,22 +335,23 @@ func ControlPlaneMessages(message  []byte) {
 	// First check that the senders id is in valid range
 	if sender == Me.NodeId || sender < 1 || sender > MAX_NODES {
 		println("Sender id WRONG: ", sender, " MsgCode=", msgHeader.MsgCode)
-		return}
-	node 	:= &Drone.NodeList[sender -1]
+		return
+	}
+	node := &Drone.NodeList[sender-1]
 	// are we in range ?
-	if IsNodeInRange(Me, node, msgHeader.LocationX, msgHeader.LocationY, msgHeader.LocationZ ) == false &&
-		node.NodeId > 0 && node.NodeId <= MAX_NODES{
+	if IsNodeInRange(Me, node, msgHeader.LocationX, msgHeader.LocationY, msgHeader.LocationZ) == false &&
+		node.NodeId > 0 && node.NodeId <= MAX_NODES {
 		fmt.Println("NODE", msgHeader.SrcId, " NOT IN RANGE, DELETE MESSAGE X=",
-		msgHeader.LocationX, "  Y=", msgHeader.LocationY)
+			msgHeader.LocationX, "  Y=", msgHeader.LocationY)
 		// Forget everything about this node
-		BMremoveID(&Me.BaseStationList, node.NodeId -1)
-		BMremoveID(&Me.SubscriberList, node.NodeId -1)
+		BMremoveID(&Me.BaseStationList, node.NodeId-1)
+		BMremoveID(&Me.SubscriberList, node.NodeId-1)
 		node.NodeActive = false
 		return
 	}
 	fmt.Println("CHECK MESSAGE CODE ", msgHeader.MsgCode)
 	switch msgHeader.MsgCode {
-	case MSG_TYPE_DISCOVERY:     // from another drone
+	case MSG_TYPE_DISCOVERY: // from another drone
 		if Drone.StepMode == 0 { // we are paused now untill next step command
 			return
 		} // dont process DISCOVERY messages
@@ -374,7 +380,7 @@ func ControlPlaneMessages(message  []byte) {
 	case MSG_TYPE_STATUS_REQ: // command from ground
 		handleGroundStatusRequest(msgHeader, message)
 		break
-	case MSG_TYPE_STEP: 		 // from ground
+	case MSG_TYPE_STEP: // from ground
 		handleGroundStepMsg(msgHeader, message)
 		break
 	case "UPDATE":
@@ -384,68 +390,71 @@ func ControlPlaneMessages(message  []byte) {
 		break
 	}
 }
+
 //====================================================================================
 // ControlPlaneMessage STEP
 //====================================================================================
-func handleGroundStepMsg(msgHeader *MessageHeader, message  []byte) {
+func handleGroundStepMsg(msgHeader *MessageHeader, message []byte) {
 	/*
-	var stepMsg = new(MsgCodeStep)
-	err := TBunmarshal(message, stepMsg) //message
-	if err != nil {
-		println("ControlPlaneMessages STEP: ERR=", err)
-		return
-	}
-	println("STEP MESSAGE step=", stepMsg.MsgStep.Steps)
-	Drone.StepMode = stepMsg.MsgStep.Steps
+		var stepMsg = new(MsgCodeStep)
+		err := TBunmarshal(message, stepMsg) //message
+		if err != nil {
+			println("ControlPlaneMessages STEP: ERR=", err)
+			return
+		}
+		println("STEP MESSAGE step=", stepMsg.MsgStep.Steps)
+		Drone.StepMode = stepMsg.MsgStep.Steps
 	*/
 
 	Drone.StepMode = msgHeader.StepMode
 }
+
 //====================================================================================
 // ControlPlaneMessage STATUS REQ
 //====================================================================================
-func handleGroundStatusRequest(msgHeader *MessageHeader, message  []byte) {
+func handleGroundStatusRequest(msgHeader *MessageHeader, message []byte) {
 	//fmt.Println("...... STATUS REQUEST MESSAGE ................")
 	fmt.Println("...... STATUS REQUEST: srcIP=", msgHeader.SrcIP, " SrcMAC=", msgHeader.SrcMAC,
-				" DstID=", msgHeader.DstId, " SrcID=", msgHeader.SrcId)
+		" DstID=", msgHeader.DstId, " SrcID=", msgHeader.SrcId)
 
 	// REPLY
 	sendUnicastStatusReplyPacket(msgHeader)
 }
+
 //====================================================================================
 // ControlPlaneMessage   GROUNDINFO
 //====================================================================================
-func handleGroundInfoMsg(msgHeader *MessageHeader, message  []byte) {
+func handleGroundInfoMsg(msgHeader *MessageHeader, message []byte) {
 	var err error
 	// TODO  ... add to msg the playing field size .... hmmm ?? relation to random etc
-	Drone.GroundFullName.Name	= msgHeader.SrcName //.DstName
-	Drone.GroundIP 				= msgHeader.SrcIP
-	Drone.GroundIPandPort 		= string(msgHeader.SrcIP) + ":" + strconv.Itoa(msgHeader.SrcPort)
-	Drone.GroundUdpPort 		= msgHeader.SrcPort
-	Drone.GroundIsKnown 		= true //msg.GroundUp
-	Drone.GroundLatitude        = msgHeader.Latitude
-	Drone.GroundLongitude       = msgHeader.Longitude
+	Drone.GroundFullName.Name = msgHeader.SrcName //.DstName
+	Drone.GroundIP = msgHeader.SrcIP
+	Drone.GroundIPandPort = string(msgHeader.SrcIP) + ":" + strconv.Itoa(msgHeader.SrcPort)
+	Drone.GroundUdpPort = msgHeader.SrcPort
+	Drone.GroundIsKnown = true //msg.GroundUp
+	Drone.GroundLatitude = msgHeader.Latitude
+	Drone.GroundLongitude = msgHeader.Longitude
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, GpsGroundHeightFromEartCenter)
 	// x,y,z := ConvertLatLongToXYZ(Me.NodeLatitude, Me.NodeLongitude, Me.NodeDistanceToGround)
-	x,y,z := ConvertLatLongToXYZ(msgHeader.Latitude, msgHeader.Longitude, Drone.GpsGroundHeightFromEartCenter)
+	x, y, z := ConvertLatLongToXYZ(msgHeader.Latitude, msgHeader.Longitude, Drone.GpsGroundHeightFromEartCenter)
 	// TODO later use x,y,z instead of LocationX,Y,Z
-	Drone.GroundX				= msgHeader.LocationX // TODO
-	Drone.GroundY				= msgHeader.LocationY
-	Drone.GroundZ				= msgHeader.LocationZ
-	Drone.GroundRadioRange		= float64(msgHeader.RadioRange)
+	Drone.GroundX = msgHeader.LocationX // TODO
+	Drone.GroundY = msgHeader.LocationY
+	Drone.GroundZ = msgHeader.LocationZ
+	Drone.GroundRadioRange = float64(msgHeader.RadioRange)
 
 	fmt.Println("DISTANCE from ME to Ground =", DistanceToGround(Me))
 	fmt.Println("Ground position from msg GroundX=", Drone.GroundX, " Y=", Drone.GroundY,
 		" Z=", Drone.GroundZ, " Calc From msg Lat/Long X=", x, " Y=", y, " Z=", z)
 	fmt.Println("DISCOVERY from msg: Latitude=", msgHeader.Latitude, " Longitude=", msgHeader.Longitude)
-	latitude,longitude := ConvertXYZtoLatLong(Drone.GroundX, Drone.GroundY, Drone.GroundZ, Drone.GpsGroundHeightFromEartCenter)
+	latitude, longitude := ConvertXYZtoLatLong(Drone.GroundX, Drone.GroundY, Drone.GroundZ, Drone.GpsGroundHeightFromEartCenter)
 	fmt.Println("DISCOVERY conv from msg XYZ coord: Latitude=", latitude, " Longitude=", longitude)
 
 	// TESTx,y,z
-	lat, lon := ConvertXYZtoLatLong(20,100,0,Drone.GpsGroundHeightFromEartCenter)
-	x,y,z = ConvertLatLongToXYZ(lat, lon, Drone.GpsGroundHeightFromEartCenter)
+	lat, lon := ConvertXYZtoLatLong(20, 100, 0, Drone.GpsGroundHeightFromEartCenter)
+	x, y, z = ConvertLatLongToXYZ(lat, lon, Drone.GpsGroundHeightFromEartCenter)
 	fmt.Println("TEST: lat=", lat, " long=", lon, " x=", x, " y=", y, " z=", z)
-	lat, lon = ConvertXYZtoLatLong(x,y,z,Drone.GpsGroundHeightFromEartCenter)
+	lat, lon = ConvertXYZtoLatLong(x, y, z, Drone.GpsGroundHeightFromEartCenter)
 	fmt.Println("TEST: Reverse: lat=", lat, " long=", lon, " x=", x, " y=", y, " z=", z)
 
 	// Drone.GroundUdpAddrSTR.IP = msg.TxIP;
@@ -474,7 +483,7 @@ func handleGroundInfoMsg(msgHeader *MessageHeader, message  []byte) {
 		// fmt.Println("GROUND INFO: Name=", Drone.GroundFullName.Name, "  IP:Port=", Drone.GroundIPandPort)
 	}
 }
-func xParseIP(s string) (string) {
+func xParseIP(s string) string {
 	ip, _, err := net.SplitHostPort(s)
 	if err == nil {
 		return ip //, nil
@@ -487,11 +496,12 @@ func xParseIP(s string) (string) {
 
 	return ip2.String() //, nil
 }
+
 //====================================================================================
 // Handle DISCOVERY messages in all states
 //====================================================================================
 func ControlPlaneProcessDiscoveryMessage(msgHeader *MessageHeader,
-									discoveryMsg *DiscoveryMsgBody){
+	discoveryMsg *DiscoveryMsgBody) {
 	//fmt.Println("Discovery MSG in state ", Drone.DroneState)
 	switch Drone.DroneState {
 	case StateAlone:
@@ -506,10 +516,11 @@ func ControlPlaneProcessDiscoveryMessage(msgHeader *MessageHeader,
 	default:
 	}
 }
+
 //==========================================================================
 //
 //===========================================================================
-func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *DiscoveryMsgBody) {
+func stateConnectedDiscoveryMessage(msgHeader *MessageHeader, discoveryMsg *DiscoveryMsgBody) {
 	sender := msgHeader.SrcId
 	if sender < 1 || sender > MAX_NODES || sender == Me.NodeId {
 		// fmt.Println("DISCARD MSG: invalid senderId=", sender)
@@ -522,46 +533,52 @@ func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *Disc
 			" SrcName=", msgHeader.SrcName, " src MAC=", msgHeader.SrcMAC, " DstName=", msgHeader.DstName)
 	}
 	// update info for the sending drone
-	node.NodeName					= msgHeader.SrcName
-	node.NodeId						= msgHeader.SrcId
-	node.NodeIP						= msgHeader.SrcIP
-	node.NodeMac					= msgHeader.SrcMAC
-	node.NodePort					= msgHeader.SrcPort
-	node.NodeMsgSeq         			= msgHeader.SrcSeq
-	node.NodeLongitude					= msgHeader.Longitude
-	node.NodeLatitude					= msgHeader.Latitude
-	node.NodeRadioRange					= msgHeader.RadioRange
-	node.MyX						= float64(msgHeader.LocationX)	// TODO
-	node.MyY						= float64(msgHeader.LocationY)
-	node.MyZ						= float64(msgHeader.LocationZ)
+	node.NodeName = msgHeader.SrcName
+	node.NodeId = msgHeader.SrcId
+	node.NodeIP = msgHeader.SrcIP
+	node.NodeMac = msgHeader.SrcMAC
+	node.NodePort = msgHeader.SrcPort
+	node.NodeMsgSeq = msgHeader.SrcSeq
+	node.NodeLongitude = msgHeader.Longitude
+	node.NodeLatitude = msgHeader.Latitude
+	node.NodeRadioRange = msgHeader.RadioRange
+	node.MyX = float64(msgHeader.LocationX) // TODO
+	node.MyY = float64(msgHeader.LocationY)
+	node.MyZ = float64(msgHeader.LocationZ)
 
-	node.NodeTimeCreated				= discoveryMsg.TimeCreated // incarnation #
-	node.NodeLastChangeTime				= discoveryMsg.LastChangeTime
-	node.NodeActive					= discoveryMsg.NodeActive
-	node.NodeMsgsSent 					= discoveryMsg.MsgsSent
-	node.NodeMsgsRcvd 					= discoveryMsg.MsgsRcvd
-	node.NodeMsgLastSentAt				= discoveryMsg.MsgLastSentAt
-	node.NodeMsgLastRcvdRemote			= discoveryMsg.MsgLastRcvdAt
+	node.NodeTimeCreated = discoveryMsg.TimeCreated // incarnation #
+	node.NodeLastChangeTime = discoveryMsg.LastChangeTime
+	node.NodeActive = discoveryMsg.NodeActive
+	node.NodeMsgsSent = discoveryMsg.MsgsSent
+	node.NodeMsgsRcvd = discoveryMsg.MsgsRcvd
+	node.NodeMsgLastSentAt = discoveryMsg.MsgLastSentAt
+	node.NodeMsgLastRcvdRemote = discoveryMsg.MsgLastRcvdAt
 	g, _ := strconv.ParseUint(discoveryMsg.Gateways, 10, 64)
-	node.GatewayList.M_Mask			= g // discoveryMsg.Gateways
+	node.GatewayList.M_Mask = g // discoveryMsg.Gateways
 	s, _ := strconv.ParseUint(discoveryMsg.Subscribers, 10, 64)
-	node.SubscriberList.M_Mask 		= s // discoveryMsg.Subscribers
+	node.SubscriberList.M_Mask = s // discoveryMsg.Subscribers
 	b, _ := strconv.ParseUint(discoveryMsg.BaseStations, 10, 64)
-	node.BaseStationList.M_Mask		= b // discoveryMsg.BaseStations
+	node.BaseStationList.M_Mask = b // discoveryMsg.BaseStations
 
-	node.Velocity					= discoveryMsg.Velocity
-	node.VelocityX					= float64(discoveryMsg.VelocityX)
-	node.VelocityY					= float64(discoveryMsg.VelocityY)
-	node.VelocityZ					= float64(discoveryMsg.VelocityZ)
-	node.Xdirection					= 1
-	node.Ydirection					= 1
-	node.Zdirection					= 1
-	if node.VelocityX < 0 { node.Xdirection = -1}
-	if node.VelocityY < 0 { node.Ydirection = -1}
-	if node.VelocityZ < 0 { node.Zdirection = -1}
+	node.Velocity = discoveryMsg.Velocity
+	node.VelocityX = float64(discoveryMsg.VelocityX)
+	node.VelocityY = float64(discoveryMsg.VelocityY)
+	node.VelocityZ = float64(discoveryMsg.VelocityZ)
+	node.Xdirection = 1
+	node.Ydirection = 1
+	node.Zdirection = 1
+	if node.VelocityX < 0 {
+		node.Xdirection = -1
+	}
+	if node.VelocityY < 0 {
+		node.Ydirection = -1
+	}
+	if node.VelocityZ < 0 {
+		node.Zdirection = -1
+	}
 
-	node.NodeMsgLastRcvdLocal  			= time.Now() // TBtimestampNano() // time.Now()
-	Drone.LastFrameRecvd[sender -1] = time.Now().String()
+	node.NodeMsgLastRcvdLocal = time.Now() // TBtimestampNano() // time.Now()
+	Drone.LastFrameRecvd[sender-1] = time.Now().String()
 	// TODO:
 	// node.ResidualHop
 	//SubscriberList  BitMask
@@ -577,7 +594,7 @@ func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *Disc
 	// Remember all node we learned about:
 	// TODO Hmm ... should we forget those deleted by sender TODO
 
-/* // GORAN Mar05 comment out
+	/* // GORAN Mar05 comment out
 	if node.NodeRole == BASE_STATION {
 		//fmt.Println("Updated BaseStationList=", Me.BaseStationList.M_Mask)
 		BMaddID(&Me.BaseStationList, int(node.NodeId - 1)) //nodeId)
@@ -587,8 +604,8 @@ func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *Disc
 		BMaddID(&Me.SubscriberList, int(node.NodeId -1)) //.addID(nodeId);
 		//fmt.Println("Updated SubscriberList=", Me.SubscriberList.M_Mask)
 	}
-*/
-	node.NodeActive =  true
+	*/
+	node.NodeActive = true
 
 	if Drone.GroundIsKnown {
 		node.NodeDistanceToGround = DistanceToGround(node)
@@ -599,8 +616,8 @@ func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *Disc
 			fmt.Println("=== NEED TO FORWARD, OTHER NODE ", int(node.NodeDistanceToGround),
 				" AWAY FROM GROUND, Ground at ", Drone.GroundRadioRange)
 			theNode, distance := FindShortestConnectionToGround()
-			fmt.Println("====== Me=", Me.NodeId, " MY DISTANCE=",Me.NodeDistanceToGround,
-				" HIS DISTANCE=", node.NodeDistanceToGround," SHORTEST=", distance,
+			fmt.Println("====== Me=", Me.NodeId, " MY DISTANCE=", Me.NodeDistanceToGround,
+				" HIS DISTANCE=", node.NodeDistanceToGround, " SHORTEST=", distance,
 				" Forwarder=", theNode.NodeId)
 			if Me == theNode && Me.NodeDistanceToGround <= Drone.GroundRadioRange {
 				fmt.Println("====== I AM THE FORWARDER ===========================")
@@ -614,10 +631,10 @@ func stateConnectedDiscoveryMessage(msgHeader *MessageHeader,discoveryMsg  *Disc
 	}
 }
 
-func FindShortestConnectionToGround() (* NodeInfo, float64) {
+func FindShortestConnectionToGround() (*NodeInfo, float64) {
 	var theNode *NodeInfo = nil
 	var distance float64 = 1000000000
-	for j:=0; j<64; j++ {
+	for j := 0; j < 64; j++ {
 		if Drone.NodeList[j].NodeActive == true {
 			if distance > Drone.NodeList[j].NodeDistanceToGround {
 				distance = Drone.NodeList[j].NodeDistanceToGround
@@ -627,6 +644,7 @@ func FindShortestConnectionToGround() (* NodeInfo, float64) {
 	}
 	return theNode, distance
 }
+
 //====================================================================================
 // Handle messages received in the CONNECTED state
 //====================================================================================
@@ -638,9 +656,12 @@ func RemoteCommandMessages(msg *Msg) {
 		var cmd LinuxCommand
 		cmd = cmds[cmdIndex]
 		err := RunLinuxCommand(REMOTE_CMD, cmd.Cmd, cmd.Par1, cmd.Par2, cmd.Par3, cmd.Par4, cmd.Par5, cmd.Par6)
-		if err != nil {fmt.Printf("%T\n", err)}
+		if err != nil {
+			fmt.Printf("%T\n", err)
+		}
 	}
 }
+
 //=======================================================================
 //
 //=======================================================================
@@ -655,16 +676,17 @@ func LocalCommandMessages(cmdText string) {
 		Me.NodeActive = false
 	default:
 	}
-	fmt.Println("RCVD CONSOLE INPUT =", cmdText, " DRONE ACTIVE=", Me.NodeActive )
-// TODO figure out the bellow line
+	fmt.Println("RCVD CONSOLE INPUT =", cmdText, " DRONE ACTIVE=", Me.NodeActive)
+	// TODO figure out the bellow line
 	//err := RunLinuxCommand(LOCAL_CMD, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6])
 	//if err != nil {fmt.Printf("%T\n", err)}
 
 }
+
 //=======================================================================
 //
 //=======================================================================
-func RunLinuxCommand(origin, Cmd,Par1,Par2,Par3,Par4,Par5,Par6 string) error {
+func RunLinuxCommand(origin, Cmd, Par1, Par2, Par3, Par4, Par5, Par6 string) error {
 	//fmt.Println("RCVD CMD ", cmdIndex, " =",cmd)
 	// fmt.Println("cmd=", cmd.Cmd, " ", cmd.Par1, " ", cmd.Par2, " ", cmd.Par3, " ", cmd.Par4, " ", cmd.Par5, " ", cmd.Par6)
 	//cmd.Output() → run it, wait, get output
@@ -684,7 +706,7 @@ func RunLinuxCommand(origin, Cmd,Par1,Par2,Par3,Par4,Par5,Par6 string) error {
 	//	fmt.Printf("CMD OUTPUT=",string(output))
 	//	// SEND REEPLY, OR MAYBE COMBINED ALL FIRST
 	//}
-	fmt.Println(origin, " CMD= ",Cmd," ", Par1 , Par2, " ", Par3, " ", Par4,
+	fmt.Println(origin, " CMD= ", Cmd, " ", Par1, Par2, " ", Par3, " ", Par4,
 		" ", Par5, " ", Par6, " :  RESULT:", string(output), "  ERR:", err)
 	return err
 }
@@ -702,46 +724,47 @@ func changeState(newState string) {
 //====================================================================================
 func SetFinalDroneInfo() {
 
-	Me = &Drone.NodeList[Drone.DroneId - 1]
+	Me = &Drone.NodeList[Drone.DroneId-1]
 	if Drone.DroneIpAddress == "" {
 		Drone.DroneIpAddress, Drone.DroneMacAddress = GetLocalIp() // get IP and MAC
 	}
 
-	Me.NodeId 			= Drone.DroneId
-	Me.NodeRole 		= SUBSCRIBER
-	Me.NodeIamAlone		= true
-	Me.NodeIP           = Drone.DroneIpAddress
-	Me.NodePort,_		= strconv.Atoi(Drone.DroneUdpPort)
-	Me.NodeMac          = Drone.DroneMacAddress
-	Me.NodeName         = Drone.DroneName
+	Me.NodeId = Drone.DroneId
+	Me.NodeRole = SUBSCRIBER
+	Me.NodeIamAlone = true
+	Me.NodeIP = Drone.DroneIpAddress
+	Me.NodePort, _ = strconv.Atoi(Drone.DroneUdpPort)
+	Me.NodeMac = Drone.DroneMacAddress
+	Me.NodeName = Drone.DroneName
 	DroneColor(ALONE, Me.NodeIamAlone) //black
 
-	Me.NodeRadioRange 		= int(Drone.DroneRadioRange) 	// RANGE_3D or RANGE_2D
+	Me.NodeRadioRange = int(Drone.DroneRadioRange) // RANGE_3D or RANGE_2D
 
 	InitializeVelocity()
 	// TODO memset(&distanceVector, 0, sizeof(distanceVector))
-	Me.NodeLastChangeTime 	= float64(TBtimestampNano() )// time.Now().String()
-	Me.NodeActive 		= true
-	Drone.DroneState 	= StateAlone
+	Me.NodeLastChangeTime = float64(TBtimestampNano()) // time.Now().String()
+	Me.NodeActive = true
+	Drone.DroneState = StateAlone
 
 	BMclear(&Me.BaseStationList)
 	BMclear(&Me.SubscriberList)
 	BMclear(&Me.GatewayList)
 
 	var bit uint64 = 0x1
-	for j:=0; j<64; j++ {
+	for j := 0; j < 64; j++ {
 		// TODO .. from prev coded, should be just = 0xffffffffffffffff
 		Me.GatewayList.M_BitMask[j] = bit
 		bit <<= 1
 	}
-	for droneNumber :=0; droneNumber < MAX_NODES; droneNumber++ {
+	for droneNumber := 0; droneNumber < MAX_NODES; droneNumber++ {
 		Drone.NodeList[droneNumber].NodeMsgLastRcvdLocal = time.Now() // TBtimestampNano() //time.Now()
 	}
 	Me.NodeLastMove = TBtimestampNano() // nano seconds
 	Drone.StepMode = STEPMODE_DISABLED
-	Drone.DiscoveryInterval = 1000  // millisec
+	Drone.DiscoveryInterval = 1000 // millisec
 	Drone.LastDiscoverySent = TBtimestampMilli()
 }
+
 //====================================================================================
 // InitFromCommandLine()  READ ARGUMENTS IF ANY
 //====================================================================================
@@ -774,6 +797,7 @@ func InitFromCommandLine() {
 		Drone.GroundIPandPort = os.Args[5] + ":" + os.Args[6]
 	}
 }
+
 //====================================================================================
 // InitFromConfigFile() - Set configuration from config file
 //====================================================================================
@@ -821,17 +845,17 @@ func InitFromConfigFile() {
 
 	fmt.Println("BroadcastRxIP             = ", Drone.BroadcastRxIP)
 	fmt.Println("BroadcastRxPort           = ", Drone.BroadcastRxPort)
-	Drone.BroadcastRxAddress					= Drone.BroadcastRxIP + ":" + Drone.BroadcastRxPort
+	Drone.BroadcastRxAddress = Drone.BroadcastRxIP + ":" + Drone.BroadcastRxPort
 	fmt.Println("BroadcastRxAddress        = ", Drone.BroadcastRxAddress)
 
 	fmt.Println("UnicastRxIP             = ", Drone.UnicastRxIP)
 	fmt.Println("UnicastRxPort           = ", Drone.UnicastRxPort)
-	Drone.UnicastRxAddress					  = Drone.UnicastRxIP + ":" + Drone.UnicastRxPort
+	Drone.UnicastRxAddress = Drone.UnicastRxIP + ":" + Drone.UnicastRxPort
 	fmt.Println("UnicastRxAddress        = ", Drone.UnicastRxAddress)
 
 	fmt.Println("BroadcastTxIP             = ", Drone.BroadcastTxIP)
 	fmt.Println("BroadcastTxPort           = ", Drone.BroadcastTxPort)
-	Drone.BroadcastTxAddress			       = Drone.BroadcastTxIP + ":" + Drone.BroadcastTxPort
+	Drone.BroadcastTxAddress = Drone.BroadcastTxIP + ":" + Drone.BroadcastTxPort
 	fmt.Println("BroadcastTxAddress        = ", Drone.BroadcastTxAddress)
 
 	fmt.Println("GroundId                  = ", Drone.GroundIP)
@@ -852,70 +876,71 @@ func InitFromConfigFile() {
 //====================================================================================
 func InitDroneConfiguration() {
 
-	Drone.DroneName 			= "Drone01" // will be overwritten by config
-	Drone.DroneId 				= 1			// will be overwritten by config
-	Drone.DroneIpAddress		= ""
-	Drone.DroneConnTimer 		= DRONE_KEEPALIVE_TIMER// 5
+	Drone.DroneName = "Drone01" // will be overwritten by config
+	Drone.DroneId = 1           // will be overwritten by config
+	Drone.DroneIpAddress = ""
+	Drone.DroneConnTimer = DRONE_KEEPALIVE_TIMER // 5
 	Drone.DroneKeepAliveRcvdTime = time.Now()
 	// Drone.KnownDrones 			= nil // Array of drones and ground stations learned
-	Drone.DroneCmdChannel 		= nil // so that all local threads can talk back
-	Drone.DroneUnicastRcvCtrlChannel 	= nil // to send control msgs to Recv Thread
-	Drone.DroneBroadcastRcvCtrlChannel  = nil
-	Drone.DroneMulticastRcvCtrlChannel  = nil
-	Drone.DroneConnection 				= nil
-	Drone.StepMode              		= -1
-	Drone.DroneActive 					= true
-	Drone.GpsMyGeometry					= ellipsoid.Ellipsoid {}
-	Drone.GpsGroundHeightFromEartCenter = 6377.563	// kilo meters
-	Drone.GpsOrbitAltitudeFromGround	= 1000.0     // kilo meters
-	Drone.GpsPlayingFieldSide			= 100000.0  // meters
-	Drone.GpsReferenceLatitude 			= 34.055912
-	Drone.GpsReferenceLongitude 		= -118.46478
-	Drone.DroneSpaceDimension			= "2D"
-	Drone.DroneRadioRange				= RANGE_2D
-	Drone.DroneDiscoveryTimeout			= 1500  // milli sec
-	Drone.DroneReceiveCount 			= 0
-	Drone.DroneSendCount 				= 0
-	Log.DebugLog 						= true
-	Log.WarningLog 						= true
-	Log.ErrorLog 						= true
+	Drone.DroneCmdChannel = nil            // so that all local threads can talk back
+	Drone.DroneUnicastRcvCtrlChannel = nil // to send control msgs to Recv Thread
+	Drone.DroneBroadcastRcvCtrlChannel = nil
+	Drone.DroneMulticastRcvCtrlChannel = nil
+	Drone.DroneConnection = nil
+	Drone.StepMode = -1
+	Drone.DroneActive = true
+	Drone.GpsMyGeometry = ellipsoid.Ellipsoid{}
+	Drone.GpsGroundHeightFromEartCenter = 6377.563 // kilo meters
+	Drone.GpsOrbitAltitudeFromGround = 1000.0      // kilo meters
+	Drone.GpsPlayingFieldSide = 100000.0           // meters
+	Drone.GpsReferenceLatitude = 34.055912
+	Drone.GpsReferenceLongitude = -118.46478
+	Drone.DroneSpaceDimension = "2D"
+	Drone.DroneRadioRange = RANGE_2D
+	Drone.DroneDiscoveryTimeout = 1500 // milli sec
+	Drone.DroneReceiveCount = 0
+	Drone.DroneSendCount = 0
+	Log.DebugLog = true
+	Log.WarningLog = true
+	Log.ErrorLog = true
 
-	Drone.DroneUnicastRcvCtrlChannel 	= make(chan []byte) //
-	Drone.DroneBroadcastRcvCtrlChannel 	= make(chan []byte)
-	Drone.DroneMulticastRcvCtrlChannel 	= make(chan []byte)
-	Drone.DroneCmdChannel 				= make(chan []byte) // receive command line cmnds
+	Drone.DroneUnicastRcvCtrlChannel = make(chan []byte) //
+	Drone.DroneBroadcastRcvCtrlChannel = make(chan []byte)
+	Drone.DroneMulticastRcvCtrlChannel = make(chan []byte)
+	Drone.DroneCmdChannel = make(chan []byte) // receive command line cmnds
 
-	Drone.BroadcastRxAddress	= ":9999"
-	Drone.BroadcastRxPort		= "9999"
-	Drone.BroadcastRxIP			= ""
-	Drone.BroadcastTxPort		= "8888"
-	Drone.BroadcastConnection	= nil
-	Drone.BroadcastTxStruct		= new(net.UDPAddr)
+	Drone.BroadcastRxAddress = ":9999"
+	Drone.BroadcastRxPort = "9999"
+	Drone.BroadcastRxIP = ""
+	Drone.BroadcastTxPort = "8888"
+	Drone.BroadcastConnection = nil
+	Drone.BroadcastTxStruct = new(net.UDPAddr)
 
-	Drone.UnicastRxAddress		= ":8888"
-	Drone.UnicastRxPort			= "8888"
-	Drone.UnicastRxIP			= ""
-	Drone.UnicastTxPort			= "8888"
-	Drone.UnicastRxConnection	= nil
-	Drone.UnicastRxStruct		= nil
-	Drone.UnicastTxStruct		= new(net.UDPAddr)
-	Drone.Velocity		= 0
+	Drone.UnicastRxAddress = ":8888"
+	Drone.UnicastRxPort = "8888"
+	Drone.UnicastRxIP = ""
+	Drone.UnicastTxPort = "8888"
+	Drone.UnicastRxConnection = nil
+	Drone.UnicastRxStruct = nil
+	Drone.UnicastTxStruct = new(net.UDPAddr)
+	Drone.Velocity = 0
 	// TODO - these are randomly generated, just for history (last setup)
-	Drone.VelocityScaleX		= 50
-	Drone.VelocityScaleY		= 30
-	Drone.VelocityScaleZ		= 0
-	Drone.GpsDevice 			= "NONE"
-	Drone.GroundIsKnown     = false
-	Drone.GroundUdpPort		= 0
-	Drone.GroundIP			= ""
-	Drone.DroneUdpPort		= "8888"
-	Drone.GroundIPandPort	= "" //Drone.GroundIP + ":" + Drone.GroundUdpPort
-	Drone.DroneUdpAddrSTR 	= new(net.UDPAddr)
-	Drone.GroundUdpAddrSTR 	= new(net.UDPAddr)
+	Drone.VelocityScaleX = 50
+	Drone.VelocityScaleY = 30
+	Drone.VelocityScaleZ = 0
+	Drone.GpsDevice = "NONE"
+	Drone.GroundIsKnown = false
+	Drone.GroundUdpPort = 0
+	Drone.GroundIP = ""
+	Drone.DroneUdpPort = "8888"
+	Drone.GroundIPandPort = "" //Drone.GroundIP + ":" + Drone.GroundUdpPort
+	Drone.DroneUdpAddrSTR = new(net.UDPAddr)
+	Drone.GroundUdpAddrSTR = new(net.UDPAddr)
 	Drone.DroneCreationTime = strconv.FormatInt(TBtimestampNano(), 10)
 	Drone.GpsReferenceLatitude = 34.055912
 	Drone.GpsReferenceLongitude = -118.46478
 }
+
 //====================================================================================
 //  Initialize IP and UDP addressing
 //====================================================================================
@@ -985,36 +1010,36 @@ func sendBroadcastDiscoveryPacket() {
 	}
 	// ... done in updateConnectivity ...MoveNode(Me)
 	Me.NodeMsgLastSentAt = float64(TBtimestampNano()) // time.Now() //TBtimestampNano()
-		//strconv.FormatInt(TBtimestampNano(), 10)
+	//strconv.FormatInt(TBtimestampNano(), 10)
 
-	dstPort, _ :=strconv.Atoi(Drone.BroadcastTxPort)
+	dstPort, _ := strconv.Atoi(Drone.BroadcastTxPort)
 	// TODO add heightFromEarthCenter as configuration ?? what if it wobbles?
-	latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ,
-		Drone.GpsGroundHeightFromEartCenter + Drone.GpsOrbitAltitudeFromGround)
+	latitude, longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ,
+		Drone.GpsGroundHeightFromEartCenter+Drone.GpsOrbitAltitudeFromGround)
 	// timeNow := time.Now()
 	msgHdr := MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     3,
-		TimeSent:   float64(TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
-		LocationX:	Me.MyX,
-		LocationY:	Me.MyY,
-		LocationZ:	Me.MyZ,
-		Longitude:  longitude,
-		Latitude:   latitude,
-		RadioRange:	int(Me.NodeRadioRange),
-		SrcSeq:  	Me.NodeMsgSeq,
-		SrcRole: 	Me.NodeRole,
-		SrcMAC:  	Me.NodeMac,
-		SrcName: 	Me.NodeName,
-		SrcId:   	Me.NodeId,  // node ids are 1 based
-		SrcIP:   	Me.NodeIP,
-		SrcPort: 	Me.NodePort,
-		DstName: 	"BROADCAST",
-		DstId:   	0,
-		DstIP:   	Drone.BroadcastTxIP,
-		DstPort: 	dstPort,
+		MsgCode:     "DISCOVERY",
+		Ttl:         3,
+		TimeSent:    float64(TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
+		LocationX:   Me.MyX,
+		LocationY:   Me.MyY,
+		LocationZ:   Me.MyZ,
+		Longitude:   longitude,
+		Latitude:    latitude,
+		RadioRange:  int(Me.NodeRadioRange),
+		SrcSeq:      Me.NodeMsgSeq,
+		SrcRole:     Me.NodeRole,
+		SrcMAC:      Me.NodeMac,
+		SrcName:     Me.NodeName,
+		SrcId:       Me.NodeId, // node ids are 1 based
+		SrcIP:       Me.NodeIP,
+		SrcPort:     Me.NodePort,
+		DstName:     "BROADCAST",
+		DstId:       0,
+		DstIP:       Drone.BroadcastTxIP,
+		DstPort:     dstPort,
 		GroundRange: int(Me.NodeDistanceToGround),
-		Hash:     	0,
+		Hash:        0,
 	}
 	g := "" + strconv.FormatUint(Me.GatewayList.M_Mask, 10)
 	s := "" + strconv.FormatUint(Me.SubscriberList.M_Mask, 10)
@@ -1022,18 +1047,18 @@ func sendBroadcastDiscoveryPacket() {
 
 	discBody := DiscoveryMsgBody{
 
-		Gateways:	    g, // Me.GatewayList.M_Mask,  // TODO might be not used ??
-		Subscribers:    s, // Me.SubscriberList.M_Mask,
-		BaseStations:   b, // Me.BaseStationList.M_Mask,
-		NodeActive:     Me.NodeActive,
-		MsgsSent:       Me.NodeMsgsSent,
-		MsgsRcvd:       Me.NodeMsgsRcvd,
+		Gateways:     g, // Me.GatewayList.M_Mask,  // TODO might be not used ??
+		Subscribers:  s, // Me.SubscriberList.M_Mask,
+		BaseStations: b, // Me.BaseStationList.M_Mask,
+		NodeActive:   Me.NodeActive,
+		MsgsSent:     Me.NodeMsgsSent,
+		MsgsRcvd:     Me.NodeMsgsRcvd,
 
-		Velocity:       Me.Velocity,      // float64
-		VelocityX:      Me.VelocityX,     // float64
-		VelocityY:      Me.VelocityY,     // float64
-		VelocityZ:      Me.VelocityZ,     // float64
-		BwRequest:      0,
+		Velocity:  Me.Velocity,  // float64
+		VelocityX: Me.VelocityX, // float64
+		VelocityY: Me.VelocityY, // float64
+		VelocityZ: Me.VelocityZ, // float64
+		BwRequest: 0,
 	}
 	myMsg := MsgCodeDiscovery{
 		MsgHeader:    msgHdr,
@@ -1046,56 +1071,57 @@ func sendBroadcastDiscoveryPacket() {
 	ControlPlaneBroadcastSend(msg, Drone.BroadcastTxStruct)
 
 }
+
 //=================================================================================
 //=================================================================================
 func forwardUnicastDiscoveryPacket(msgHeader *MessageHeader,
-			discoveryMsg  *DiscoveryMsgBody, groundDistance int) {
+	discoveryMsg *DiscoveryMsgBody, groundDistance int) {
 	// groundDistance - from this sender to ground, not from origin
 	// use the header fields from original msg, except distance
-	port, _ :=strconv.Atoi(Drone.UnicastTxPort)
+	port, _ := strconv.Atoi(Drone.UnicastTxPort)
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
 	msgHdr := MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     	1,
-		TimeSent: 	msgHeader.TimeSent,
-		LocationX:	msgHeader.LocationX,
-		LocationY:	msgHeader.LocationY,
-		LocationZ:	msgHeader.LocationZ,
-		Longitude:  msgHeader.Longitude,
-		Latitude:   msgHeader.Latitude,
-		RadioRange:	msgHeader.RadioRange,
-		SrcSeq:  	msgHeader.SrcSeq,
-		SrcRole: 	msgHeader.SrcRole,
-		SrcMAC:  	msgHeader.SrcMAC,
-		SrcName: 	msgHeader.SrcName,
-		SrcId:   	msgHeader.SrcId,  // node ids are 1 based
-		SrcIP:   	msgHeader.SrcIP,
-		SrcPort: 	msgHeader.SrcPort,
-		DstName: 	"UNICAST",
-		DstId:   	0,
-		DstIP:   	Drone.GroundIP,
-		DstPort: 	port,
-		GroundRange:	groundDistance, // use my distance
-		Hash:     	0,
+		MsgCode:     "DISCOVERY",
+		Ttl:         1,
+		TimeSent:    msgHeader.TimeSent,
+		LocationX:   msgHeader.LocationX,
+		LocationY:   msgHeader.LocationY,
+		LocationZ:   msgHeader.LocationZ,
+		Longitude:   msgHeader.Longitude,
+		Latitude:    msgHeader.Latitude,
+		RadioRange:  msgHeader.RadioRange,
+		SrcSeq:      msgHeader.SrcSeq,
+		SrcRole:     msgHeader.SrcRole,
+		SrcMAC:      msgHeader.SrcMAC,
+		SrcName:     msgHeader.SrcName,
+		SrcId:       msgHeader.SrcId, // node ids are 1 based
+		SrcIP:       msgHeader.SrcIP,
+		SrcPort:     msgHeader.SrcPort,
+		DstName:     "UNICAST",
+		DstId:       0,
+		DstIP:       Drone.GroundIP,
+		DstPort:     port,
+		GroundRange: groundDistance, // use my distance
+		Hash:        0,
 	}
 
 	discBody := DiscoveryMsgBody{
-		TimeCreated:	discoveryMsg.TimeCreated,
-		LastChangeTime:	discoveryMsg.LastChangeTime,
+		TimeCreated:    discoveryMsg.TimeCreated,
+		LastChangeTime: discoveryMsg.LastChangeTime,
 		NodeActive:     discoveryMsg.NodeActive,
 		MsgsSent:       discoveryMsg.MsgsSent,
 		MsgsRcvd:       discoveryMsg.MsgsRcvd,
-		MsgLastSentAt:	discoveryMsg.MsgLastSentAt,
+		MsgLastSentAt:  discoveryMsg.MsgLastSentAt,
 		MsgLastRcvdAt:  discoveryMsg.MsgLastRcvdAt,
-		Gateways:	    discoveryMsg.Gateways, 		// Me.GatewayList.M_Mask,
-		Subscribers:    discoveryMsg.Subscribers, 	// Me.SubscriberList.M_Mask,
-		BaseStations:   discoveryMsg.BaseStations, 	// Me.BaseStationList.M_Mask,
+		Gateways:       discoveryMsg.Gateways,     // Me.GatewayList.M_Mask,
+		Subscribers:    discoveryMsg.Subscribers,  // Me.SubscriberList.M_Mask,
+		BaseStations:   discoveryMsg.BaseStations, // Me.BaseStationList.M_Mask,
 
-		Velocity:       discoveryMsg.Velocity,      // float64
-		VelocityX:      discoveryMsg.VelocityX,     // float64
-		VelocityY:      discoveryMsg.VelocityY,     // float64
-		VelocityZ:      discoveryMsg.VelocityZ,     // float64
-		BwRequest:      0,
+		Velocity:  discoveryMsg.Velocity,  // float64
+		VelocityX: discoveryMsg.VelocityX, // float64
+		VelocityY: discoveryMsg.VelocityY, // float64
+		VelocityZ: discoveryMsg.VelocityZ, // float64
+		BwRequest: 0,
 	}
 	myMsg := MsgCodeDiscovery{
 		MsgHeader:    msgHdr,
@@ -1104,10 +1130,11 @@ func forwardUnicastDiscoveryPacket(msgHeader *MessageHeader,
 	Me.NodeMsgSeq++
 	msg, _ := TBmarshal(myMsg)
 
-	fmt.Println( "FORWARD(",Me.NodeDistanceToGround ,") UNICAST DISCOVERY for ",
-				msgHeader.SrcId, " to GROUND at ", Drone.GroundIP)
+	fmt.Println("FORWARD(", Me.NodeDistanceToGround, ") UNICAST DISCOVERY for ",
+		msgHeader.SrcId, " to GROUND at ", Drone.GroundIP)
 	ControlPlaneUnicastSend(msg, Drone.GroundIP+":"+Drone.UnicastTxPort)
 }
+
 //=================================================================================
 //=================================================================================
 func sendUnicastStatusReplyPacket(msgHeader *MessageHeader) {
@@ -1116,31 +1143,31 @@ func sendUnicastStatusReplyPacket(msgHeader *MessageHeader) {
 
 	// port, _ :=strconv.Atoi(Drone.UnicastTxPort)
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
-	x,y,z := ConvertLatLongToXYZ(Me.NodeLatitude, Me.NodeLongitude, Me.NodeDistanceToGround)
+	x, y, z := ConvertLatLongToXYZ(Me.NodeLatitude, Me.NodeLongitude, Me.NodeDistanceToGround)
 	msgHdr := MessageHeader{
-		MsgCode:	"STATUS_REPLY",
-		Ttl:     	1,
-		TimeSent: 	float64(TBtimestampNano()),
-		LocationX:	x,
-		LocationY:	y,
-		LocationZ:	z,
-		Longitude:  Me.NodeLongitude,
-		Latitude:   Me.NodeLatitude,
-		RadioRange:	Me.NodeRadioRange,
-		SrcSeq:  	Me.NodeMsgSeq,
-		SrcRole: 	Me.NodeRole,
-		IamAlone:	Me.NodeIamAlone,
-		SrcMAC:  	Me.NodeMac,
-		SrcName: 	Me.NodeName,
-		SrcId:   	Me.NodeId,  // node ids are 1 based
-		SrcIP:   	Me.NodeIP,
-		SrcPort: 	Me.NodePort,
-		DstName: 	"UNICAST",
-		DstId:   	msgHeader.SrcId,
-		DstIP:   	msgHeader.SrcIP,
-		DstPort: 	msgHeader.SrcPort,
-		GroundRange:	int(Me.NodeDistanceToGround),
-		Hash:     	0,
+		MsgCode:     "STATUS_REPLY",
+		Ttl:         1,
+		TimeSent:    float64(TBtimestampNano()),
+		LocationX:   x,
+		LocationY:   y,
+		LocationZ:   z,
+		Longitude:   Me.NodeLongitude,
+		Latitude:    Me.NodeLatitude,
+		RadioRange:  Me.NodeRadioRange,
+		SrcSeq:      Me.NodeMsgSeq,
+		SrcRole:     Me.NodeRole,
+		IamAlone:    Me.NodeIamAlone,
+		SrcMAC:      Me.NodeMac,
+		SrcName:     Me.NodeName,
+		SrcId:       Me.NodeId, // node ids are 1 based
+		SrcIP:       Me.NodeIP,
+		SrcPort:     Me.NodePort,
+		DstName:     "UNICAST",
+		DstId:       msgHeader.SrcId,
+		DstIP:       msgHeader.SrcIP,
+		DstPort:     msgHeader.SrcPort,
+		GroundRange: int(Me.NodeDistanceToGround),
+		Hash:        0,
 	}
 
 	// Win C++ does not support uint64 fields
@@ -1149,82 +1176,83 @@ func sendUnicastStatusReplyPacket(msgHeader *MessageHeader) {
 	b := strconv.FormatUint(Me.BaseStationList.M_Mask, 10)
 
 	statusReplyBody := StatusReplyMsgBody{
-		TimeCreated:	Me.NodeTimeCreated,
-		LastChangeTime:	Me.NodeLastChangeTime,
+		TimeCreated:    Me.NodeTimeCreated,
+		LastChangeTime: Me.NodeLastChangeTime,
 		NodeActive:     Me.NodeActive,
 		MsgsSent:       Me.NodeMsgsSent,
 		MsgsRcvd:       Me.NodeMsgsRcvd,
-		MsgLastSentAt:	 Me.NodeMsgLastSentAt,
-		MsgLastRcvdAt:   Me.NodeMsgLastRcvdRemote,
-		Gateways:	    g, 		// Me.GatewayList.M_Mask,
-		Subscribers:    s, 	// Me.SubscriberList.M_Mask,
-		BaseStations:   b, 	// Me.BaseStationList.M_Mask,
+		MsgLastSentAt:  Me.NodeMsgLastSentAt,
+		MsgLastRcvdAt:  Me.NodeMsgLastRcvdRemote,
+		Gateways:       g, // Me.GatewayList.M_Mask,
+		Subscribers:    s, // Me.SubscriberList.M_Mask,
+		BaseStations:   b, // Me.BaseStationList.M_Mask,
 
-		Velocity:       Me.Velocity,      // float64
-		VelocityX:      Me.VelocityX,     // float64
-		VelocityY:      Me.VelocityY,     // float64
-		VelocityZ:      Me.VelocityZ,     // float64
-		BwRequest:      0,
+		Velocity:  Me.Velocity,  // float64
+		VelocityX: Me.VelocityX, // float64
+		VelocityY: Me.VelocityY, // float64
+		VelocityZ: Me.VelocityZ, // float64
+		BwRequest: 0,
 	}
 
 	myMsg := MsgCodeStatusReply{
-		MsgHeader:    msgHdr,
+		MsgHeader:      msgHdr,
 		MsgStatusReply: statusReplyBody,
 	}
 	Me.NodeMsgSeq++
 	msg, _ := TBmarshal(myMsg)
 
-	fmt.Println( "STATUS_REPLY(",int(Me.NodeDistanceToGround) ,") UNICAST to GROUND at ", Drone.GroundIP)
+	fmt.Println("STATUS_REPLY(", int(Me.NodeDistanceToGround), ") UNICAST to GROUND at ", Drone.GroundIP)
 	ControlPlaneUnicastSend(msg, Drone.GroundIP+":"+Drone.UnicastTxPort)
 }
+
 //=================================================================================
 //=================================================================================
 func sendUnicastDiscoveryPacket(unicastIP string, distance int) {
 	Me.NodeMsgLastSentAt = float64(TBtimestampNano()) //time.Now() //strconv.FormatInt(TBtimestampNano(), 10)
 
-	port, _ :=strconv.Atoi(Drone.UnicastTxPort)
+	port, _ := strconv.Atoi(Drone.UnicastTxPort)
 	// latitude,longitude := ConvertXYZtoLatLong(Me.MyX, Me.MyY, Me.MyZ, orbitHeightFromEartCenter)
 	msgHdr := MessageHeader{
-		MsgCode:	"DISCOVERY",
-		Ttl:     	3,
-		TimeSent: 	float64(TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
-		LocationX:	Me.MyX,
-		LocationY:	Me.MyY,
-		LocationZ:	Me.MyZ,
-		Longitude:  Me.NodeLongitude,
-		Latitude:   Me.NodeLatitude,
-		RadioRange:	int(Me.NodeRadioRange),
-		SrcSeq:  	Me.NodeMsgSeq,
-		SrcRole: 	Me.NodeRole,
-		SrcMAC:  	Me.NodeMac,
-		SrcName: 	Me.NodeName,
-		SrcId:   	Me.NodeId,  // node ids are 1 based
-		SrcIP:   	Me.NodeIP,
-		SrcPort: 	Me.NodePort,
-		DstName: 	"UNICAST",
-		DstId:   	0,
-		DstIP:   	Drone.BroadcastTxIP,
-		DstPort: 	port,
+		MsgCode:     "DISCOVERY",
+		Ttl:         3,
+		TimeSent:    float64(TBtimestampNano()), // timeNow, //Me.MsgLastSentAt, // time.Now().String()
+		LocationX:   Me.MyX,
+		LocationY:   Me.MyY,
+		LocationZ:   Me.MyZ,
+		Longitude:   Me.NodeLongitude,
+		Latitude:    Me.NodeLatitude,
+		RadioRange:  int(Me.NodeRadioRange),
+		SrcSeq:      Me.NodeMsgSeq,
+		SrcRole:     Me.NodeRole,
+		SrcMAC:      Me.NodeMac,
+		SrcName:     Me.NodeName,
+		SrcId:       Me.NodeId, // node ids are 1 based
+		SrcIP:       Me.NodeIP,
+		SrcPort:     Me.NodePort,
+		DstName:     "UNICAST",
+		DstId:       0,
+		DstIP:       Drone.BroadcastTxIP,
+		DstPort:     port,
 		GroundRange: distance,
-		Hash:     	0,
+		Hash:        0,
 	}
 	g := strconv.FormatUint(Me.GatewayList.M_Mask, 10)
 	s := strconv.FormatUint(Me.SubscriberList.M_Mask, 10)
 	b := strconv.FormatUint(Me.BaseStationList.M_Mask, 10)
 
 	discBody := DiscoveryMsgBody{
-		NodeActive:     Me.NodeActive,
-		MsgsSent:       Me.NodeMsgsSent,
-		MsgsRcvd:       Me.NodeMsgsRcvd,
-		Gateways:	    g, // Me.GatewayList.M_Mask,
-		Subscribers:    s, // Me.SubscriberList.M_Mask,
-		BaseStations:   b, // Me.BaseStationList.M_Mask,
+		NodeActive:   Me.NodeActive,
+		MsgsSent:     Me.NodeMsgsSent,
+		MsgsRcvd:     Me.NodeMsgsRcvd,
+		Gateways:     g, // Me.GatewayList.M_Mask,
+		Subscribers:  s, // Me.SubscriberList.M_Mask,
+		BaseStations: b, // Me.BaseStationList.M_Mask,
 
-		Velocity:       Me.Velocity,      // float64
-		VelocityX:      Me.VelocityX,     // float64
-		VelocityY:      Me.VelocityY,     // float64
-		VelocityZ:      Me.VelocityZ,     // float64
-		BwRequest:      0,
+		Velocity:  Me.Velocity,  // float64
+		VelocityX: Me.VelocityX, // float64
+		VelocityY: Me.VelocityY, // float64
+		VelocityZ: Me.VelocityZ, // float64
+		BwRequest: 0,
 	}
 	myMsg := MsgCodeDiscovery{
 		MsgHeader:    msgHdr,
@@ -1259,4 +1287,3 @@ func locateOtherDrone(slice []NodeInfo, otherDrone string) *NodeInfo {
 	}
 	return nil
 }
-

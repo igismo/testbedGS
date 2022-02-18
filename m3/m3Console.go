@@ -10,12 +10,12 @@ package main
 
 import (
 	"bufio"
+	"common"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
 	"strings"
-	"synapse/common"
 )
 
 var ConsoleInput = make(chan string)
@@ -38,14 +38,16 @@ func StartConsole(consoleInput <-chan string) {
 			//fmt.Println("OS=", runtime.GOOS, "  LENGTH=" ,len(s), " INPUT=", s)
 
 			//scanner.Scan()
-			fmt.Println("STDIN: LENGTH=", len(scanner.Text()),"INPUT=",scanner.Text())
+			fmt.Println("STDIN: LENGTH=", len(scanner.Text()), "INPUT=", scanner.Text())
 			s := scanner.Text()
 			//fi, err := os.Stdin.Stat()
 
 			s = strings.Replace(s, "\n", "", -1)
 			s = strings.Replace(s, "\r", "", -1) // just in a case
-			fmt.Println("OS=", runtime.GOOS," PROCS=",runtime.GOMAXPROCS(0)," LENGTH=",len(s)," INPUT=", s)
-			if len(s) < 2 {continue}
+			fmt.Println("OS=", runtime.GOOS, " PROCS=", runtime.GOMAXPROCS(0), " LENGTH=", len(s), " INPUT=", s)
+			if len(s) < 2 {
+				continue
+			}
 
 			// SendTextMsg(s)
 			// myRecvChannel <- recvBuffer[0:length]
@@ -56,11 +58,11 @@ func StartConsole(consoleInput <-chan string) {
 
 			switch sa[0] {
 			case "quit":
-				common.ControlPlaneCloseConnections(Drone.Connectivity)
+				common.ControlPlaneCloseConnections(M3.Connectivity)
 				fmt.Printf("Exiting\n")
 				os.Exit(0)
 			case "exit":
-				common.ControlPlaneCloseConnections(Drone.Connectivity)
+				common.ControlPlaneCloseConnections(M3.Connectivity)
 				fmt.Printf("Exiting\n")
 				os.Exit(0)
 			case "help":

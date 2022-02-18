@@ -21,6 +21,7 @@ const (
 	icmpv6EchoRequest = 128
 	icmpv6EchoReply   = 129
 )
+
 // ICMP header following IP header:
 type icmpMessage struct {
 	Type     int             // type

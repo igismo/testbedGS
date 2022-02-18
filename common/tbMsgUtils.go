@@ -9,6 +9,7 @@
 // Goran Scuric      1.0  01012019  Initial design
 //================================================================================
 package common
+
 import (
 	"fmt"
 	"net"
@@ -24,9 +25,10 @@ func TBtimestampNano() int64 {
 }
 
 func TBtimestampMilli() int64 {
-	milli := time.Now().UnixNano() / 1000000// / (int64(time.Millisecond)/int64(time.Nanosecond))
+	milli := time.Now().UnixNano() / 1000000 // / (int64(time.Millisecond)/int64(time.Nanosecond))
 	return milli
 }
+
 //====================================================================================
 //
 //====================================================================================
@@ -39,7 +41,6 @@ func TBsendMsgOut(msgOut []byte, udpAddress net.UDPAddr, udpConnection *net.UDPC
 		fmt.Println("ERROR UNICAST Sending Out to", udpAddress, ": udpConnection = nil")
 	}
 }
-
 
 //====================================================================================
 // send keep alive messages to everybody registered

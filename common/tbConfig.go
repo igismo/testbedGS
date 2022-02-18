@@ -15,17 +15,15 @@
 //================================================================================
 package common
 
-const DRONE_KEEPALIVE_TIMER		= 2  // was 5
-const MAX_NODES 				= 64 // anything bigger would require bitMap structure upgrades
+const DRONE_KEEPALIVE_TIMER = 2 // was 5
+const MAX_NODES = 64            // anything bigger would require bitMap structure upgrades
 // Playing field in km
-const X_WIDTH 					= 100  // 100 km per side
-const Y_WIDTH 					= 100  // 200 km per side
-const Z_WIDTH 					= 100  // 100 km per side
-const DEFAULT_VELOCITY 			= 100  //  km/hour
-const DEFAULT_VELOCITY_SCALE	= 100  // 0
-const THREE_DIMENSIONAL 		= false
-const RANGE_3D 					= 100    // 170
-const RANGE_2D 					= 100	 // 100
-const GROUND_STATION_ID			= 64
-
-
+const X_WIDTH = 100                // 100 km per side
+const Y_WIDTH = 100                // 200 km per side
+const Z_WIDTH = 100                // 100 km per side
+const DEFAULT_VELOCITY = 100       //  km/hour
+const DEFAULT_VELOCITY_SCALE = 100 // 0
+const THREE_DIMENSIONAL = false
+const RANGE_3D = 100 // 170
+const RANGE_2D = 100 // 100
+const GROUND_STATION_ID = 64

@@ -36,35 +36,36 @@ type NameId struct {
 }
 
 type MessageHeader struct {
-	MsgCode 	string
-	Ttl         int
-	StepMode	int
-	TimeSent	float64 // int64  // in milli sec
-	SrcSeq      int
-	SrcRole     int 	// node type
-	IamAlone	bool
-	SrcMAC      string
+	MsgCode  string
+	Ttl      int
+	StepMode int
+	TimeSent float64 // int64  // in milli sec
+	SrcSeq   int
+	SrcRole  int // node type
+	IamAlone bool
+	SrcMAC   string
 
-	SrcName	    string
-	SrcId       int 	// src node
-	SrcIP       string
-	SrcPort		string
+	SrcName string
+	SrcId   int // src node
+	SrcIP   string
+	SrcPort string
 
-	DstName		string
-	DstId       int 	// destination node
-	DstIP		string
-	DstPort		string
-	GroundRange	int		// are we in range to ground - true or false, or distance?
-	Hash        int		// hash value for the packet header
+	DstName     string
+	DstId       int // destination node
+	DstIP       string
+	DstPort     string
+	GroundRange int // are we in range to ground - true or false, or distance?
+	Hash        int // hash value for the packet header
 }
+
 //type MessageTypeCode struct {0
 //	MsgCode string
 //}
 
 type Msg struct {
-//	MsgCode	string
+	//	MsgCode	string
 	MsgHeader MessageHeader
-	MsgBody    []byte
+	MsgBody   []byte
 }
 
 type LinuxCommand struct {
@@ -81,83 +82,91 @@ type CommandList []LinuxCommand
 //----------------------------------------------------------------------------
 // .... MsgCode ...
 //----------------------------------------------------------------------------
-const MSG_TYPE_CTRL_ADD_DRONE 		= "DRONE_ADD"
-const MSG_TYPE_CTRL_DELETE_DRONE	= "DRONE_DELETE"
-const MSG_TYPE_CTRL_SET_CANVAS 		= "SET_CANVAS"
+const MSG_TYPE_CTRL_ADD_DRONE = "DRONE_ADD"
+const MSG_TYPE_CTRL_DELETE_DRONE = "DRONE_DELETE"
+const MSG_TYPE_CTRL_SET_CANVAS = "SET_CANVAS"
 const MSG_TYPE_CTRL_1 = "CTRL_1"
 const MSG_TYPE_CTRL_2 = "CTRL_2"
 const MSG_TYPE_CTRL_3 = "CTRL_3"
 
 // Messages from ground control
-const MSG_TYPE_DRONE_MOVE	= "DRONE_MOVE"
+const MSG_TYPE_DRONE_MOVE = "DRONE_MOVE"
+
 type MoveMsgBody struct {
 	longitude float64
 	latitude  float64
 }
 
-const MSG_TYPE_STATUS_REQ	= "DRONE_STATUS_REQ"
+const MSG_TYPE_STATUS_REQ = "DRONE_STATUS_REQ"
+
 type MsgCodeStatusRequest struct {
-	MsgHeader 		MessageHeader
-	MsgStatusReply 	StatusRequestMsgBody
+	MsgHeader      MessageHeader
+	MsgStatusReply StatusRequestMsgBody
 }
 type StatusRequestMsgBody struct { // TODO
-	seq int		// sender seq number
-	cmd string  // any sub command
+	seq int    // sender seq number
+	cmd string // any sub command
 }
 
-const MSG_TYPE_STATUS_REPLY	= "DRONE_STATUS_REPLY"
+const MSG_TYPE_STATUS_REPLY = "DRONE_STATUS_REPLY"
+
 type MsgCodeStatusReply struct {
-	MsgHeader 		MessageHeader
-	MsgStatusReply 	StatusReplyMsgBody
+	MsgHeader      MessageHeader
+	MsgStatusReply StatusReplyMsgBody
 }
 type StatusReplyMsgBody struct {
-	TimeCreated		float64  // nanosec
-	NodeActive		bool
-	LastChangeTime	float64 // string	// last time our role changed
-	MsgLastSentAt   float64  //time.Time //string // time
-	MsgLastRcvdAt   float64  // time.Time //string // time
-	MsgsSent        int64
-	MsgsRcvd        int64
-	Gateways	 	string // no support in C++ for uint64 // contains all possible relay nodes
-	Subscribers		string //uint64
-	BaseStations	string //uint64
+	TimeCreated    float64 // nanosec
+	NodeActive     bool
+	LastChangeTime float64 // string	// last time our role changed
+	MsgLastSentAt  float64 //time.Time //string // time
+	MsgLastRcvdAt  float64 // time.Time //string // time
+	MsgsSent       int64
+	MsgsRcvd       int64
+	Gateways       string // no support in C++ for uint64 // contains all possible relay nodes
+	Subscribers    string //uint64
+	BaseStations   string //uint64
 }
 
-const MSG_TYPE_DRONE_TERMINATE	= "DRONE_TERMINATE"
+const MSG_TYPE_DRONE_TERMINATE = "DRONE_TERMINATE"
+
 type MsgCodeTerminate struct {
 	when float64
 }
 
 const MSG_TYPE_GROUND_INFO = "GROUNDINFO"
+
 type MsgCodeGroundInfo struct {
-	MsgHeader 		MessageHeader
+	MsgHeader MessageHeader
 }
 
 const MSG_TYPE_STEP = "STEP"
+
 type StepMsgBody struct {
 	Steps int
 }
 type MsgCodeStep struct {
-	MsgHeader 		MessageHeader
-	MsgStep 	    StepMsgBody
+	MsgHeader MessageHeader
+	MsgStep   StepMsgBody
 }
+
 //====================================
 const MSG_TYPE_DISCOVERY = "DISCOVERY"
+
 type MsgCodeDiscovery struct {
-	MsgHeader 		MessageHeader
-	MsgDiscovery 	DiscoveryMsgBody
+	MsgHeader    MessageHeader
+	MsgDiscovery DiscoveryMsgBody
 }
 type DiscoveryMsgBody struct {
-	TimeCreated		float64  // nanosec
-	NodeActive		bool
-	LastChangeTime	float64 // string	// last time our role changed
-	MsgLastSentAt   float64  //time.Time //string // time
-	MsgLastRcvdAt   float64  // time.Time //string // time
-	MsgsSent        int64
-	MsgsRcvd        int64
-	Gateways	 	string // no support in C++ for uint64 // contains all possible relay nodes
-	Subscribers		string //uint64
-	BaseStations	string //uint64
+	TimeCreated    float64 // nanosec
+	NodeActive     bool
+	LastChangeTime float64 // string	// last time our role changed
+	MsgLastSentAt  float64 //time.Time //string // time
+	MsgLastRcvdAt  float64 // time.Time //string // time
+	MsgsSent       int64
+	MsgsRcvd       int64
+	Gateways       string // no support in C++ for uint64 // contains all possible relay nodes
+	Subscribers    string //uint64
+	BaseStations   string //uint64
 }
 
 const MSG_TYPE_CMD = "COMMANDS"
@@ -213,6 +222,5 @@ const MSG_TYPE_TERMINATED = "MSG_TERMINATED"
 
 type MsgTerminated struct {
 }
+
 //--------------------------------------------------
-
-

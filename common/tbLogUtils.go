@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"runtime"
+	"time"
 )
 
 const (
@@ -105,21 +105,21 @@ func CreateLog(Log *LogInstance, moduleName, logDir string) {
 	//}
 	//fmt.Println("The pwd is \n", out)
 
-	 hour,min,sec := time.Now().Clock()
-	 year,month,day := time.Now().Date()
-	 //fmt.Println("YEAR=", year , "MONTH=", month ,"DAY=", day, " HOUR=", hour, "MIN=", min, " SEC=", sec)
+	hour, min, sec := time.Now().Clock()
+	year, month, day := time.Now().Date()
+	//fmt.Println("YEAR=", year , "MONTH=", month ,"DAY=", day, " HOUR=", hour, "MIN=", min, " SEC=", sec)
 	// formatedTime := current.Format(time.RFC3339)
 	// var logpath =  logDir + moduleName + formatedTime + ".log"
-	date := fmt.Sprint(year,month,day,"-",hour,min,sec)
-	fmt.Println("DATE=",date)
-	var logpath string =  logDir + moduleName + "-"+ date + ".log"
+	date := fmt.Sprint(year, month, day, "-", hour, min, sec)
+	fmt.Println("DATE=", date)
+	var logpath string = logDir + moduleName + "-" + date + ".log"
 
-	fmt.Println("CreateLog: MY LOG DIR=", logDir," PATH=", logpath)
+	fmt.Println("CreateLog: MY LOG DIR=", logDir, " PATH=", logpath)
 	// flag.Parse()
 	// var file, err = os.Create(logpath)
 	file, err := os.OpenFile(logpath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Println("CreateLog: ERROR=",err, "  ERROR-MY LOG PATH=", logpath)
+		fmt.Println("CreateLog: ERROR=", err, "  ERROR-MY LOG PATH=", logpath)
 		// TODO panic(err)
 	}
 	// Make sure file gets closed when we terminate
@@ -135,7 +135,8 @@ func CreateLog(Log *LogInstance, moduleName, logDir string) {
 	Log.Warning(Log, "START")
 }
 
-var MyVersion 		= time.Now()
+var MyVersion = time.Now()
+
 //=============================================================================
 // The following is example of log usage within other modules
 //=============================================================================

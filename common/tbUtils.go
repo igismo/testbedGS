@@ -3,6 +3,7 @@
 // Goran Scuric      1.0  10222019  Initial design
 //================================================================================
 package common
+
 import (
 	"encoding/binary"
 	"fmt"
@@ -13,22 +14,22 @@ import (
 func isUnicast(mac []byte) bool {
 	for i := 0; i < 6; i++ {
 		if mac[i] != 0xff {
-			return true;
+			return true
 		}
 	}
-	return false;
+	return false
 }
 func isMyMac(pktMac, myMac []byte) bool {
 	for i := 0; i < 6; i++ {
 		if pktMac[i] != myMac[i] {
-			return false;
+			return false
 		}
 	}
-	return true;
+	return true
 }
 func setBroadcastMac(mac []byte) {
 	for i := 0; i < 6; i++ {
-		mac[i] = 0xff;
+		mac[i] = 0xff
 	}
 }
 
@@ -75,52 +76,56 @@ func GetCoordinatesFromPosition(longitude, latitude, radius float64) (float64, f
 func GetDistanceFromPosition(longitude1, latitude1, radius1, longitude2, latitude2, radius2 float64) float64 {
 	x1, y1, z1 := GetCoordinatesFromPosition(longitude1, latitude1, radius1)
 	x2, y2, z2 := GetCoordinatesFromPosition(longitude2, latitude2, radius2)
-	distance   := GetDistanceFromCoordinates(x1, y1, z1, x2, y2, z2)
+	distance := GetDistanceFromCoordinates(x1, y1, z1, x2, y2, z2)
 	return distance
 }
+
 //===========================================================================================
 //
 //===========================================================================================
-func ConvertXYZtoLatLong(x,y,z float64, heightFromEarthCenter float64) (float64, float64){
+func ConvertXYZtoLatLong(x, y, z float64, heightFromEarthCenter float64) (float64, float64) {
 	// calculate back the lat and long
 	// latitude  = asin (z / R) * 180 /3.14159
 	// longitude = atan2(y / x) * 180 /3.14159
 	// all values in either just kilo meters, OR just meters, no mixing
-	latitude  := math.Asin(z/heightFromEarthCenter) * 180.0 / 3.14159
+	latitude := math.Asin(z/heightFromEarthCenter) * 180.0 / 3.14159
 	longitude := math.Atan(y/x) * 180.0 / 3.14159
 	return latitude, longitude
 }
+
 //===========================================================================================
 //
 //===========================================================================================
-func ConvertLatLongToXYZ(latitude, longitude float64, heightFromEarthCenter float64) (float64,float64,float64) {
+func ConvertLatLongToXYZ(latitude, longitude float64, heightFromEarthCenter float64) (float64, float64, float64) {
 	// all values in kilo meters, earth Radius = 6371 km
 	x := heightFromEarthCenter * math.Cos((latitude*3.1415926535)/180.0) * math.Cos((longitude*3.1415926535)/180.0)
 	y := heightFromEarthCenter * math.Cos((latitude*3.1415926535)/180.0) * math.Sin((longitude*3.1415926535)/180.0)
 	z := heightFromEarthCenter * math.Sin((latitude*3.1415926535)/180.0)
-	return x,y,z
+	return x, y, z
 }
+
 //===========================================================================================
 //
 //===========================================================================================
-func DistanceTwoPoints(x1,y1,z1,x2,y2,z2 float64) float64 {
+func DistanceTwoPoints(x1, y1, z1, x2, y2, z2 float64) float64 {
 	distanceFloat64 := math.Sqrt(
 		math.Pow(x1-x2, 2) +
 			math.Pow(y1-y2, 2) +
-			math.Pow(z1-z2, 2) )
+			math.Pow(z1-z2, 2))
 	return distanceFloat64
 }
+
 //===========================================================================================
 //
 //===========================================================================================
-func DistanceToEarthCenter(x,y,z float64) float64 {
+func DistanceToEarthCenter(x, y, z float64) float64 {
 	// Note Drone.GroundX, Y and Z are from GROUNDINFO msg previously
 	// received from the Ground Station
 	// This returns distance from SAT to a point on earth surface
 	distanceFloat64 := math.Sqrt(
 		math.Pow(x, 2) +
 			math.Pow(y, 2) +
-			math.Pow(z, 2) )
+			math.Pow(z, 2))
 	return distanceFloat64
 }
 
@@ -182,6 +187,7 @@ func formatReceiver(name string, osId int, udpAddress net.UDPAddr) NameId {
 	receiver := NameId{Name: name, Address: udpAddress} // TimeCreated: "",
 	return receiver
 }
+
 /*
 //====================================================================================
 // Save the pointer to my own row for faster handling

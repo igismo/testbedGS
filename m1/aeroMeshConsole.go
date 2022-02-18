@@ -39,14 +39,16 @@ func StartConsole(consoleInput <-chan string) {
 			//fmt.Println("OS=", runtime.GOOS, "  LENGTH=" ,len(s), " INPUT=", s)
 
 			//scanner.Scan()
-			fmt.Println("STDIN: LENGTH=", len(scanner.Text()),"INPUT=",scanner.Text())
+			fmt.Println("STDIN: LENGTH=", len(scanner.Text()), "INPUT=", scanner.Text())
 			s := scanner.Text()
 			//fi, err := os.Stdin.Stat()
 
 			s = strings.Replace(s, "\n", "", -1)
 			s = strings.Replace(s, "\r", "", -1) // just in a case
-			fmt.Println("OS=", runtime.GOOS," PROCS=",runtime.GOMAXPROCS(0)," LENGTH=",len(s)," INPUT=", s)
-			if len(s) < 2 {continue}
+			fmt.Println("OS=", runtime.GOOS, " PROCS=", runtime.GOMAXPROCS(0), " LENGTH=", len(s), " INPUT=", s)
+			if len(s) < 2 {
+				continue
+			}
 
 			// SendTextMsg(s)
 			// myRecvChannel <- recvBuffer[0:length]
