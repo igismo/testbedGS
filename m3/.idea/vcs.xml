@@ -2,5 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$GOROOT$/src/testbedGS" vcs="Git" />
+    <mapping directory="$GOPATH$/src/testbedGS" vcs="Git" />
   </component>
 </project>

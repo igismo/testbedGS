@@ -10,7 +10,6 @@ package main
 
 import (
 	"bufio"
-	"common"
 	"flag"
 	"fmt"
 	"os"
